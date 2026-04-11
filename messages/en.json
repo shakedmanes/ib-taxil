@@ -1,0 +1,11 @@
+{
+  "app": { "title": "IB-Taxil" },
+  "nav": { "language": "עברית", "lightMode": "Light", "darkMode": "Dark" },
+  "wizard": {
+    "step1": "Select Year",
+    "step2": "Import Data",
+    "step3": "Review",
+    "step4": "Tax Summary",
+    "step5": "Export"
+  }
+}
