@@ -136,8 +136,8 @@ describe('IBKRApiCard', () => {
     const reportXml = '<FlexQueryResponse />'
 
     const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ text: async () => sendXml })
-      .mockResolvedValueOnce({ text: async () => reportXml })
+      .mockResolvedValueOnce({ ok: true, text: async () => sendXml })
+      .mockResolvedValueOnce({ ok: true, text: async () => reportXml })
     vi.stubGlobal('fetch', mockFetch)
 
     const { onData } = setup()
@@ -174,7 +174,7 @@ describe('IBKRApiCard', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
 
     const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ text: async () => '<FlexStatementResponse><Status>Error</Status></FlexStatementResponse>' })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<FlexStatementResponse><Status>Error</Status></FlexStatementResponse>' })
     vi.stubGlobal('fetch', mockFetch)
 
     const { onError } = setup()

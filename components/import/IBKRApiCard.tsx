@@ -26,6 +26,7 @@ export function IBKRApiCard({ taxYear, onData, onError }: Props) {
     try {
       // Phase 1: get reference code
       const sendRes = await fetch(`${PROXY_BASE}?action=send&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}`)
+      if (!sendRes.ok) throw new Error(`IBKR proxy returned ${sendRes.status}. Please try again.`)
       const sendXml = await sendRes.text()
       const refMatch = sendXml.match(/<ReferenceCode>(.*?)<\/ReferenceCode>/)
       if (!refMatch) throw new Error('Could not get reference code from IBKR. Check your token and Query ID.')
@@ -35,6 +36,7 @@ export function IBKRApiCard({ taxYear, onData, onError }: Props) {
 
       // Phase 2: fetch report using reference code
       const getRes = await fetch(`${PROXY_BASE}?action=get&q=${encodeURIComponent(refMatch[1])}`)
+      if (!getRes.ok) throw new Error(`IBKR proxy returned ${getRes.status} when fetching report. Please try again.`)
       const xml = await getRes.text()
 
       const data = parseFlexXml(xml)
@@ -59,10 +61,11 @@ export function IBKRApiCard({ taxYear, onData, onError }: Props) {
 
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">
+          <label htmlFor="flex-token" className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">
             Flex Query Token
           </label>
           <input
+            id="flex-token"
             type="password"
             value={token}
             onChange={e => setToken(e.target.value)}
@@ -71,10 +74,11 @@ export function IBKRApiCard({ taxYear, onData, onError }: Props) {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">
+          <label htmlFor="flex-query-id" className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">
             Query ID
           </label>
           <input
+            id="flex-query-id"
             type="text"
             value={queryId}
             onChange={e => setQueryId(e.target.value)}

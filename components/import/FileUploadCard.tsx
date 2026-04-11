@@ -20,8 +20,8 @@ export function FileUploadCard({ onData, onError }: Props) {
       onError('Unsupported file type. Please upload an XML (Flex Query) or CSV (Activity Statement) file.')
       return
     }
-    const text = await file.text()
     try {
+      const text = await file.text()
       const data = ext === 'xml' ? parseFlexXml(text) : parseCsv(text)
       onData(data)
     } catch (err: unknown) {
