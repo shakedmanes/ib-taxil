@@ -6,6 +6,7 @@
     "step2": "Import Data",
     "step3": "Review",
     "step4": "Tax Summary",
-    "step5": "Export"
+    "step5": "Export",
+    "back": "Back"
   }
 }
