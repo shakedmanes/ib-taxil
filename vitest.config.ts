@@ -14,6 +14,7 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     passWithNoTests: true,
+    exclude: ['**/node_modules/**', '**/.worktrees/**'],
   },
   resolve: {
     alias: { '@': resolve(__dirname, '.') },
