@@ -1,0 +1,6 @@
+name = "ibkr-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://ib-taxil.vercel.app"
