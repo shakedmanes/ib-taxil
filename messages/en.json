@@ -8,5 +8,11 @@
     "step4": "Tax Summary",
     "step5": "Export",
     "back": "Back"
+  },
+  "step1": {
+    "title": "Select Tax Year",
+    "subtitle": "Choose the tax year you're filing for",
+    "privacyNote": "Your data is processed entirely in your browser. Nothing is stored on our servers.",
+    "next": "Continue"
   }
 }
