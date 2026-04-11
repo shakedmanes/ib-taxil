@@ -13,7 +13,9 @@ export function Navbar() {
 
   const switchLocale = () => {
     const next = locale === 'en' ? 'he' : 'en'
-    const withoutLocale = pathname.replace(`/${locale}`, '')
+    const withoutLocale = pathname.startsWith(`/${locale}`)
+      ? pathname.slice(`/${locale}`.length) || '/'
+      : pathname
     router.push(`/${next}${withoutLocale}`)
   }
 
@@ -31,6 +33,7 @@ export function Navbar() {
         <button
           onClick={switchLocale}
           className="text-slate-400 hover:text-white text-sm transition-colors"
+          aria-label="Switch language"
         >
           {t('language')}
         </button>
