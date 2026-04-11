@@ -86,5 +86,5 @@ function absStr(v: unknown): string {
 
 function normaliseArray(v: unknown): Record<string, unknown>[] {
   if (!v) return []
-  return Array.isArray(v) ? v : [v]
+  return Array.isArray(v) ? v : [v as Record<string, unknown>]
 }

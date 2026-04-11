@@ -7,7 +7,7 @@ export async function fetchBoiRates(year: number): Promise<ExchangeRate[]> {
   const url = `${BOI_API}?startperiod=${year}-01-01&endperiod=${year}-12-31&format=jsondata`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`BOI API error: ${res.status} ${res.statusText}`)
-  const json = await res.json()
+  const json = await res.json() as any
 
   // BOI SDMX-JSON structure: dates in dimensions, values in dataSets
   const dates: string[] =
