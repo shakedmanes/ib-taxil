@@ -1,6 +1,10 @@
-export interface ExchangeRate {
-  date: string    // YYYY-MM-DD
-  usdToIls: string // decimal string
-}
+import type { Currency } from '@/lib/ibkr/types'
 
-export type RatesMap = Map<string, string>  // date → ILS rate (decimal string)
+/** currency -> (ISO date 'YYYY-MM-DD') -> representative rate as decimal string. */
+export type RatesMap = Record<Currency, Record<string, string>>
+
+export interface ExchangeRateUsed {
+  currency: Currency
+  date: string
+  rate: string
+}
