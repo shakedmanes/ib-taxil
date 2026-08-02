@@ -5,19 +5,25 @@ function normaliseArray(v: unknown): Record<string, unknown>[] {
 
 /** True iff the parsed Flex doc carries per-lot closed-lot detail. */
 export function hasClosedLotDetail(parsed: unknown): boolean {
-  const doc = parsed as Record<string, any>
-  const stmt = doc?.FlexQueryResponse?.FlexStatements?.FlexStatement
-  if (!stmt) return false
-  const trades = normaliseArray(stmt.Trades?.Trade)
-  return trades.some(t => String(t.levelOfDetail) === 'CLOSED_LOT') || Boolean(stmt.ClosedLots)
+  const statements = flexStatements(parsed)
+  return statements.some(stmt => {
+    const lots = normaliseArray(stmt.Trades?.Lot)
+      .filter(l => String(l.levelOfDetail ?? 'CLOSED_LOT') === 'CLOSED_LOT')
+    const trades = normaliseArray(stmt.Trades?.Trade)
+    return lots.length > 0 || trades.some(t => String(t.levelOfDetail) === 'CLOSED_LOT') || Boolean(stmt.ClosedLots)
+  })
 }
 
 /** True iff the parsed Flex doc contains any trade rows at all. */
 export function hasAnyTrade(parsed: unknown): boolean {
+  const statements = flexStatements(parsed)
+  return statements.some(stmt =>
+    normaliseArray(stmt.Trades?.Trade).length > 0 || normaliseArray(stmt.Trades?.Lot).length > 0)
+}
+
+function flexStatements(parsed: unknown): Record<string, any>[] {
   const doc = parsed as Record<string, any>
-  const stmt = doc?.FlexQueryResponse?.FlexStatements?.FlexStatement
-  if (!stmt) return false
-  return normaliseArray(stmt.Trades?.Trade).length > 0
+  return normaliseArray(doc?.FlexQueryResponse?.FlexStatements?.FlexStatement)
 }
 
 /** Heuristic: an IBKR Activity Statement CSV rather than a Flex Query. */

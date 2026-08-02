@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser'
+import { add } from '@/lib/tax/decimal'
 import { classifyAsset, classifyCashType } from './classify'
 import { hasClosedLotDetail, hasAnyTrade } from './detect'
 import type { IBKRData, ClosedLot, DividendRecord, InterestRecord, OutOfScopeRecord } from './types'
@@ -7,28 +8,40 @@ const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '',
 
 export function parseFlexXml(xml: string): IBKRData {
   const doc = parser.parse(xml)
-  const stmt = doc?.FlexQueryResponse?.FlexStatements?.FlexStatement
-  if (!stmt) throw new Error('Invalid Flex Query XML: missing FlexStatement')
+  const statements = arr(doc?.FlexQueryResponse?.FlexStatements?.FlexStatement)
+  if (statements.length === 0) throw new Error('Invalid Flex Query XML: missing FlexStatement')
 
-  const baseCurrency = String(stmt.currency ?? 'USD')
-  const trades = arr(stmt.Trades?.Trade)
-  const cash = arr(stmt.CashTransactions?.CashTransaction)
+  const baseCurrency = String(statements[0].currency ?? 'USD')
+  const accountId = String(statements[0].accountId ?? '')
+
+  // Closed-lot detail appears either as <Lot> elements (Flex "Closed Lots"
+  // option) or as <Trade levelOfDetail="CLOSED_LOT"> rows. Aggregate both
+  // across every statement in the file.
+  const lotRows = statements.flatMap(s =>
+    arr(s.Trades?.Lot).filter(l => String(l.levelOfDetail ?? 'CLOSED_LOT') === 'CLOSED_LOT'))
+  const tradeClosedRows = statements.flatMap(s =>
+    arr(s.Trades?.Trade).filter(t => String(t.levelOfDetail) === 'CLOSED_LOT'))
+  const closedLotRows = [...lotRows, ...tradeClosedRows]
+  const cash = statements.flatMap(s => arr(s.CashTransactions?.CashTransaction))
 
   const closedLots: ClosedLot[] = []
   const outOfScope: OutOfScopeRecord[] = []
 
-  for (const t of trades) {
-    if (String(t.levelOfDetail) !== 'CLOSED_LOT') continue
+  for (const t of closedLotRows) {
     if (classifyAsset(String(t.assetCategory)) === 'out-of-scope') {
       outOfScope.push({ id: id(t.transactionID, 'oos', outOfScope.length), kind: kindFromAsset(String(t.assetCategory)), description: String(t.description ?? t.symbol ?? ''), raw: `${t.assetCategory} ${t.symbol}` })
       continue
     }
+    const cost = absStr(t.cost)
+    // <Lot> rows carry cost + realized P&L but leave proceeds empty; the sale
+    // proceeds are cost + fifoPnlRealized. <Trade> CLOSED_LOT rows carry proceeds.
+    const proceeds = hasValue(t.proceeds) ? absStr(t.proceeds) : add(cost, String(t.fifoPnlRealized ?? '0'))
     closedLots.push({
       id: id(t.transactionID, 'lot', closedLots.length),
       ticker: String(t.symbol ?? ''), description: String(t.description ?? ''),
       currency: String(t.currency ?? baseCurrency), quantity: Math.abs(Number(t.quantity ?? 0)),
       openDate: parseDate(t.openDateTime), saleDate: parseDate(t.tradeDate ?? t.dateTime),
-      proceeds: absStr(t.proceeds), cost: absStr(t.cost), method: 'FIFO',
+      proceeds, cost, method: 'FIFO',
     })
   }
 
@@ -56,10 +69,14 @@ export function parseFlexXml(xml: string): IBKRData {
   const hasClosedLotSection = hasClosedLotDetail(doc) || !hasAnyTrade(doc)
 
   return {
-    accountId: String(stmt.accountId ?? ''), baseCurrency, lotMethod: 'FIFO',
+    accountId, baseCurrency, lotMethod: 'FIFO',
     hasClosedLotSection,
     closedLots, dividends, interest, outOfScope,
   }
+}
+
+function hasValue(v: unknown): boolean {
+  return v != null && String(v).trim() !== ''
 }
 
 function kindFromAsset(a: string): string {

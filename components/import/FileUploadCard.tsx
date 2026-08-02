@@ -11,9 +11,10 @@ import type { IBKRData } from '@/lib/ibkr/types'
 interface Props {
   onData: (data: IBKRData) => void
   onError?: (msg: string) => void
+  taxYear?: number
 }
 
-export function FileUploadCard({ onData, onError }: Props) {
+export function FileUploadCard({ onData, onError, taxYear }: Props) {
   const t = useTranslations('fileUpload')
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -77,7 +78,7 @@ export function FileUploadCard({ onData, onError }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept=".xml"
+        accept=".xml,.csv"
         aria-label={t('browseLabel')}
         onChange={onChange}
         className="hidden"
@@ -90,7 +91,7 @@ export function FileUploadCard({ onData, onError }: Props) {
       )}
 
       <div className="mt-4">
-        <FlexGuide defaultOpen={rejected} />
+        <FlexGuide taxYear={taxYear} defaultOpen={rejected} />
       </div>
 
       <p className="mt-3 text-xs text-slate-400">{t('accepted')}</p>
