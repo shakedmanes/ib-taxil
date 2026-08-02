@@ -75,7 +75,10 @@ export function ExportPanel({ result }: Props) {
         {fields.map((f, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex justify-between items-center gap-4">
             <div>
-              <p className="text-xs font-semibold text-slate-500">{t('formLabel', { form: f.form })}</p>
+              <p className="text-xs font-semibold text-slate-500">
+                {f.code ? t('formField', { form: f.form, code: f.code }) : t('formLabel', { form: f.form })}
+                {f.code && f.status === 'unverified' && <span className="text-amber-600 dark:text-amber-400"> · {t('confirmCode')}</span>}
+              </p>
               <p className="text-sm text-slate-900 dark:text-white">{tField(f.labelKey)}</p>
             </div>
             <p className="text-lg font-bold text-blue-700 dark:text-blue-300 font-mono whitespace-nowrap">
