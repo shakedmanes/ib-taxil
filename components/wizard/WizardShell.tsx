@@ -8,6 +8,7 @@ import { Step3Review } from './Step3Review'
 import { Step4Details } from './Step4Details'
 import { Step5Summary } from './Step5Summary'
 import { Step6Export } from './Step6Export'
+import { Step7Filing } from './Step7Filing'
 import { neededCurrencies, dateSpan } from '@/lib/boi/plan'
 import { fetchRatesMap } from '@/lib/boi/rates'
 import { calculateTax } from '@/lib/tax/calculator'
@@ -15,7 +16,7 @@ import type { IBKRData } from '@/lib/ibkr/types'
 import type { UserInputs } from '@/lib/tax/user-inputs'
 import type { EngineOutput } from '@/lib/tax/types'
 
-const STEP_COUNT = 6
+const STEP_COUNT = 7
 
 // Owns all wizard state and orchestrates parseFlexXml → fetchRatesMap →
 // calculateTax. Everything is in-memory only (privacy-first, ADR-0004/0006).
@@ -59,7 +60,7 @@ export function WizardShell() {
     }
   }
 
-  const steps = [t('step1'), t('step2'), t('step3'), t('step4'), t('step5'), t('step6')]
+  const steps = [t('step1'), t('step2'), t('step3'), t('step4'), t('step5'), t('step6'), t('step7')]
 
   return (
     <div>
@@ -106,7 +107,10 @@ export function WizardShell() {
         <Step5Summary output={output} onNext={next} onBack={() => setStep(4)} />
       )}
       {step === 6 && output?.status === 'ok' && (
-        <Step6Export result={output} onBack={() => setStep(5)} />
+        <Step6Export result={output} onBack={() => setStep(5)} onNext={next} />
+      )}
+      {step === 7 && output?.status === 'ok' && (
+        <Step7Filing result={output} onBack={() => setStep(6)} />
       )}
 
       {calculating && (
