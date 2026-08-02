@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { add, formatIls, gt, zero } from '@/lib/tax/decimal'
 import { Explain } from '@/components/common/Explain'
+import { itaFieldCode, isYearVerified, type FieldKey } from '@/lib/reports/field-codes'
 import type { TaxResult, DividendLine, InterestLine } from '@/lib/tax/types'
 
 interface Props { result: TaxResult; onBack: () => void }
@@ -19,12 +20,13 @@ function Stage({ n, title, children }: { n: number; title: string; children: Rea
   )
 }
 
-function FieldRow({ form, label, value }: { form: string; label: string; value: string }) {
+function FieldRow({ badge, note, label, value }: { badge: string; note?: string; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2">
       <div>
-        <span className="inline-block text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950 rounded px-1.5 py-0.5 me-2">{form}</span>
+        <span className="inline-block text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950 rounded px-1.5 py-0.5 me-2 whitespace-nowrap">{badge}</span>
         <span className="text-slate-800 dark:text-slate-100">{label}</span>
+        {note && <span className="block text-xs text-slate-500 mt-0.5">{note}</span>}
       </div>
       <span className="font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">{value}</span>
     </div>
@@ -36,11 +38,23 @@ function FieldRow({ form, label, value }: { form: string; label: string; value: 
 // Form names are reliable; exact box numbers are a verify item (see the caveat).
 export function Step7Filing({ result, onBack }: Props) {
   const t = useTranslations('filingGuide')
+  const year = result.taxYear
 
-  const F = { capitalAppendix: '1325 · נספח ג(1)', foreignAppendix: '1324 · נספח ד׳', main: '1301' }
+  // Build the form/field badge for a semantic field key, flagging unverified years.
+  const badge = (key: FieldKey): { badge: string; note?: string } => {
+    const f = itaFieldCode(key, year)
+    if (f.status === 'system') return { badge: f.form, note: t('systemComputed') }
+    if (!f.code) return { badge: f.form }
+    const label = `${f.form} · ${t('field')} ${f.code}`
+    return f.status === 'unverified'
+      ? { badge: label, note: t('confirmForYear', { year }) }
+      : { badge: label }
+  }
+
   const sumGross = (lines: (DividendLine | InterestLine)[]) => lines.reduce((s, l) => add(s, l.grossIls), zero)
   const dividendsGross = sumGross(result.dividendLines)
   const interestGross = sumGross(result.interestLines)
+  const turnover = result.capitalGainLines.reduce((s, l) => add(s, l.proceedsIls), zero)
   const overWithheld = [...result.dividendLines, ...result.interestLines].filter(l => gt(l.overWithheldIls, '0'))
 
   return (
@@ -48,9 +62,18 @@ export function Step7Filing({ result, onBack }: Props) {
       <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{t('title', { year: result.taxYear })}</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{t('subtitle')}</p>
 
-      <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl">
+      <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl">
         <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">{t('disclaimerTitle')}</p>
         <p className="text-sm text-amber-800 dark:text-amber-200">{t('disclaimer')}</p>
+      </div>
+
+      {/* Field codes are verified for 2024/2025; flagged otherwise. */}
+      <div className={`mb-6 p-3 rounded-xl border text-sm ${
+        isYearVerified(year)
+          ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+      }`}>
+        {isYearVerified(year) ? t('codesVerifiedNote', { year }) : t('codesUnverifiedNote', { year })}
       </div>
 
       <div className="space-y-4">
@@ -89,8 +112,9 @@ export function Step7Filing({ result, onBack }: Props) {
                   </tbody>
                 </table>
               </div>
-              <FieldRow form={F.capitalAppendix} label={t('netGainLabel')} value={formatIls(result.netCapitalGainIls)} />
-              <FieldRow form={F.capitalAppendix} label={t('capitalTaxLabel')} value={formatIls(result.capitalGainsTaxIls)} />
+              <FieldRow {...badge('capitalGainsTurnover')} label={t('turnoverLabel')} value={formatIls(turnover)} />
+              <FieldRow {...badge('capitalGainsDetail')} label={t('netGainLabel')} value={formatIls(result.netCapitalGainIls)} />
+              <FieldRow {...badge('capitalGainsDetail')} label={t('capitalTaxLabel')} value={formatIls(result.capitalGainsTaxIls)} />
               <p className="text-xs text-slate-500">{t('lossNote')}</p>
               <Explain explanation={result.lossOffsetExplanation} />
             </>
@@ -99,8 +123,9 @@ export function Step7Filing({ result, onBack }: Props) {
 
         <Stage n={3} title={t('stage3Title')}>
           <p>{t('stage3Body')}</p>
-          <FieldRow form={F.foreignAppendix} label={t('dividendsGrossLabel')} value={formatIls(dividendsGross)} />
-          <FieldRow form={F.foreignAppendix} label={t('interestGrossLabel')} value={formatIls(interestGross)} />
+          <FieldRow {...badge('dividend25')} label={t('dividendsGrossLabel')} value={formatIls(dividendsGross)} />
+          <FieldRow {...badge('interest25')} label={t('interestGrossLabel')} value={formatIls(interestGross)} />
+          <FieldRow {...badge('foreignIncomeTotal')} label={t('foreignIncomeTotalLabel')} value={formatIls(add(dividendsGross, interestGross))} />
           {result.countryCredits.length > 0 && (
             <>
               <p className="font-medium text-slate-700 dark:text-slate-200">{t('creditIntro')}</p>
@@ -129,7 +154,8 @@ export function Step7Filing({ result, onBack }: Props) {
               </div>
             </>
           )}
-          <FieldRow form={F.foreignAppendix} label={t('creditTotalLabel')} value={formatIls(result.totalCreditIls)} />
+          <FieldRow {...badge('ftcDividendTax')} label={t('creditTotalLabel')} value={formatIls(result.totalCreditIls)} />
+          <p className="text-xs text-slate-500">{t('ftcBoxesNote')}</p>
         </Stage>
 
         <Stage n={4} title={t('stage4Title')}>
@@ -137,13 +163,13 @@ export function Step7Filing({ result, onBack }: Props) {
           {result.surtaxExplanation
             ? <Explain explanation={result.surtaxExplanation} />
             : <p className="text-slate-400">{t('surtaxSkipped')}</p>}
-          <FieldRow form={F.main} label={t('surtaxLabel')} value={formatIls(result.surtaxIls)} />
+          <FieldRow {...badge('surtax')} label={t('surtaxLabel')} value={formatIls(result.surtaxIls)} />
         </Stage>
 
         <Stage n={5} title={t('stage5Title')}>
           <p>{t('stage5Body')}</p>
-          <FieldRow form={t('recordKeep')} label={t('carryLossLabel')} value={formatIls(result.carryForwardLossIls)} />
-          <FieldRow form={t('recordKeep')} label={t('excessCreditLabel')} value={formatIls(result.totalExcessCreditCarryForwardIls)} />
+          <FieldRow badge={t('recordKeep')} label={t('carryLossLabel')} value={formatIls(result.carryForwardLossIls)} />
+          <FieldRow badge={t('recordKeep')} label={t('excessCreditLabel')} value={formatIls(result.totalExcessCreditCarryForwardIls)} />
         </Stage>
 
         <Stage n={6} title={t('stage6Title')}>
@@ -166,7 +192,7 @@ export function Step7Filing({ result, onBack }: Props) {
 
         <Stage n={7} title={t('stage7Title')}>
           <p>{t('stage7Body')}</p>
-          <FieldRow form={F.main} label={t('totalLabel')} value={formatIls(result.totalTaxLiabilityIlsRounded)} />
+          <FieldRow badge="1301" label={t('totalLabel')} value={formatIls(result.totalTaxLiabilityIlsRounded)} />
           <p className="text-xs text-slate-500">{t('signOffNote')}</p>
         </Stage>
       </div>

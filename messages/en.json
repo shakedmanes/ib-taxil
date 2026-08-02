@@ -224,7 +224,9 @@
     "downloadJson": "Filing Package (JSON)",
     "jsonSubtitle": "Machine-readable, for the full-1301 tool",
     "itaFieldGuideHelp": "Enter these values in the matching fields when filing. Form/box numbers should be confirmed against the current-year form.",
-    "formLabel": "Form {form}"
+    "formLabel": "Form {form}",
+    "formField": "Form {form} · field {code}",
+    "confirmCode": "confirm no."
   },
   "explain": {
     "capitalGain": "{ticker}: sold for ₪{proceedsIls} (rate {saleRate} on {saleDate}) minus cost ₪{costIls} (rate {openRate} on {openDate}) = a real gain of ₪{gainIls}.",
@@ -318,7 +320,9 @@
     "foreignInterest": "Foreign interest (gross)",
     "foreignTaxCredit": "Foreign tax credit",
     "surtax": "Surtax (מס יסף)",
-    "totalLiability": "Total tax liability"
+    "totalLiability": "Total tax liability",
+    "turnover": "Securities sale proceeds (turnover)",
+    "foreignIncomeTotal": "Total foreign income"
   },
   "filingGuide": {
     "title": "How to file your {year} investment income",
@@ -370,6 +374,14 @@
     "stage7Body": "Attach נספח ג(1) and נספח ד׳ to 1301, make sure their totals match the summary lines on 1301, and submit. Keep your IBKR Flex Query XML and this report as supporting documentation.",
     "totalLabel": "Estimated total tax on investment income",
     "signOffNote": "Before submitting, have a licensed מייצג/רו״ח confirm the exact field numbers and your figures — especially the lot-matching method, treaty caps vs. your actual withholding, and the 2025 capital-surtax scope.",
-    "back": "Back"
+    "back": "Back",
+    "field": "field",
+    "confirmForYear": "confirm no. for {year}",
+    "systemComputed": "computed by the tax system — no field to enter",
+    "turnoverLabel": "Total securities proceeds (turnover)",
+    "foreignIncomeTotalLabel": "Total foreign income",
+    "ftcBoxesNote": "On נספח ד (form 1324), enter each foreign tax in its box: 431 for dividends, 417 for interest, 413 for a 30% substantial-holder dividend. The credit is capped per source country.",
+    "codesVerifiedNote": "The field numbers below were verified against the official {year} forms.",
+    "codesUnverifiedNote": "The field numbers below are from the 2024–2025 forms and were not confirmed for {year} — verify each against the {year} form before entering."
   }
 }
