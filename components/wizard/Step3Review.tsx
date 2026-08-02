@@ -7,6 +7,7 @@ import type { IBKRData } from '@/lib/ibkr/types'
 
 interface Props {
   data: IBKRData
+  taxYear: number
   substantialHoldings: string[]
   onToggleSubstantial: (ticker: string) => void
   onNext: () => void
@@ -14,9 +15,10 @@ interface Props {
 }
 
 // Review parsed data. The engine runs later (at the calculation gate), so this
-// step only previews records, lists quarantined out-of-scope items (ADR-0008),
-// and lets the user flag substantial holdings (30% rate, ADR-0006).
-export function Step3Review({ data, substantialHoldings, onToggleSubstantial, onNext, onBack }: Props) {
+// step only previews records, marks which fall in the chosen tax year, lists
+// quarantined out-of-scope items (ADR-0008), and lets the user flag substantial
+// holdings (30% rate, ADR-0006).
+export function Step3Review({ data, taxYear, substantialHoldings, onToggleSubstantial, onNext, onBack }: Props) {
   const t = useTranslations('step3Review')
 
   const holdingTickers = [...new Set([
@@ -38,8 +40,8 @@ export function Step3Review({ data, substantialHoldings, onToggleSubstantial, on
         })}
       </p>
 
-      <SummaryCards data={data} />
-      <TradeTable data={data} />
+      <SummaryCards data={data} taxYear={taxYear} />
+      <TradeTable data={data} taxYear={taxYear} />
 
       {holdingTickers.length > 0 && (
         <div className="mt-6">
