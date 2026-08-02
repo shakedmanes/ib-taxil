@@ -37,3 +37,28 @@ describe('parseFlexXml', () => {
     expect(kinds).toContain('bond-interest')
   })
 })
+
+// Real IBKR files put closed lots in <Lot> elements (not <Trade>), and leave
+// proceeds empty — the sale proceeds are cost + fifoPnlRealized.
+const lotXml = `<FlexQueryResponse><FlexStatements><FlexStatement accountId="U2" currency="USD">
+  <Trades>
+    <Trade levelOfDetail="EXECUTION" assetCategory="STK" symbol="NVDA" quantity="-6" tradeDate="20251027"/>
+    <Lot levelOfDetail="CLOSED_LOT" assetCategory="STK" symbol="NVDA" description="NVIDIA CORP" currency="USD"
+         openDateTime="20251010;144713" tradeDate="20251027" quantity="6" proceeds="" cost="1124.320132" fifoPnlRealized="4.47874"/>
+  </Trades>
+</FlexStatement></FlexStatements></FlexQueryResponse>`
+
+describe('parseFlexXml with <Lot> closed lots', () => {
+  const data = parseFlexXml(lotXml)
+  it('reads the Lot element as a closed lot', () => {
+    expect(data.hasClosedLotSection).toBe(true)
+    expect(data.closedLots).toHaveLength(1)
+  })
+  it('derives empty proceeds from cost + realized P&L', () => {
+    expect(data.closedLots[0]).toMatchObject({
+      ticker: 'NVDA', openDate: '2025-10-10', saleDate: '2025-10-27', cost: '1124.320132',
+    })
+    // 1124.320132 + 4.47874 = 1128.798872
+    expect(data.closedLots[0].proceeds).toBe('1128.798872')
+  })
+})

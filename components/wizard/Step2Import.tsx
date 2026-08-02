@@ -41,7 +41,7 @@ export function Step2Import({ taxYear, onData, onNext }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <IBKRApiCard taxYear={taxYear} onData={handleData} onError={setError} />
-        <FileUploadCard onData={handleData} onError={setError} />
+        <FileUploadCard taxYear={taxYear} onData={handleData} onError={setError} />
       </div>
 
       <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 rounded-lg text-xs text-green-700 dark:text-green-300 text-center">

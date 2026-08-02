@@ -11,6 +11,9 @@ describe('boi-rates route', () => {
     const body = await res.json() as { currency: string; rates: { date: string; rate: string }[] }
     expect(body.currency).toBe('EUR')
     expect(body.rates[0]).toEqual({ date: '2024-03-08', rate: '3.95' })
-    expect((fetch as any).mock.calls[0][0]).toContain('RER_EUR_ILS')
+    const calledUrl = (fetch as any).mock.calls[0][0] as string
+    expect(calledUrl).toContain('RER_EUR_ILS')
+    expect(calledUrl).toContain('startPeriod=2024-01-01')
+    expect(calledUrl).toContain('endPeriod=2024-12-31')
   })
 })

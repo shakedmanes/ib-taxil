@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 })
   }
 
-  const url = `${EDGE}/${dataflow}?startperiod=${encodeURIComponent(startperiod)}&endperiod=${encodeURIComponent(endperiod)}`
+  // BOI SDMX expects camelCase startPeriod / endPeriod.
+  const url = `${EDGE}/${dataflow}?startPeriod=${encodeURIComponent(startperiod)}&endPeriod=${encodeURIComponent(endperiod)}`
   const res = await fetch(url, { headers: { Accept: 'application/xml' } })
   if (!res.ok) {
     return NextResponse.json({ error: `BOI API error: ${res.status} ${res.statusText}` }, { status: res.status })
