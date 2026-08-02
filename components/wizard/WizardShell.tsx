@@ -87,6 +87,7 @@ export function WizardShell() {
       {step === 3 && data && (
         <Step3Review
           data={data}
+          taxYear={taxYear}
           substantialHoldings={inputs.substantialHoldings}
           onToggleSubstantial={toggleSubstantial}
           onNext={next}

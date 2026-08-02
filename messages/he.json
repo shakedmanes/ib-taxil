@@ -128,7 +128,9 @@
     "dividends": "דיבידנדים",
     "closedLots": "מנות שנמכרו",
     "interest": "ריבית",
-    "quarantined": "לא נכלל"
+    "quarantined": "לא נכלל",
+    "salesInYear": "מכירות בשנת {year}",
+    "ofTotal": "מתוך {total} סה\"כ"
   },
   "tradeTable": {
     "searchPlaceholder": "חפש סימול…",
@@ -139,7 +141,7 @@
     "colTicker": "סימול",
     "colType": "סוג",
     "colAmount": "סכום",
-    "colGainLoss": "רווח/הפסד (USD)",
+    "colGainLoss": "רווח/הפסד",
     "badgeDividend": "דיבידנד",
     "badgeGain": "רווח",
     "badgeLoss": "הפסד",
@@ -153,7 +155,14 @@
     "colCost": "עלות",
     "colCurrency": "מטבע",
     "kindDividend": "דיבידנד",
-    "kindInterest": "ריבית"
+    "kindInterest": "ריבית",
+    "colQty": "כמות",
+    "colStatus": "סטטוס",
+    "inYearBadge": "בשנת {year}",
+    "otherYearBadge": "שנת {year}",
+    "lotsCount": "{inYear} מתוך {total} בשנת {year}",
+    "otherYearWarning": "{outCount} מכירות למטה משנות מס אחרות — מוצגות כדי שתהיה לך תמונה מלאה, אך הן אינן חלק מהדוח לשנת {year}.",
+    "nativeGainNote": "רווח/הפסד כאן הוא נומינלי, במטבע העסקה. סכום המס שלך הוא ה\"רווח הריאלי\" בשקלים, המחושב במסך הסיכום."
   },
   "step4": {
     "title": "סיכום מס — {year}",

@@ -128,7 +128,9 @@
     "dividends": "Dividends",
     "closedLots": "Closed Lots",
     "interest": "Interest",
-    "quarantined": "Not Included"
+    "quarantined": "Not Included",
+    "salesInYear": "Sales in {year}",
+    "ofTotal": "of {total} total"
   },
   "tradeTable": {
     "searchPlaceholder": "Search ticker…",
@@ -139,7 +141,7 @@
     "colTicker": "Ticker",
     "colType": "Type",
     "colAmount": "Amount",
-    "colGainLoss": "Gain/Loss (USD)",
+    "colGainLoss": "Gain/Loss",
     "badgeDividend": "Dividend",
     "badgeGain": "Gain",
     "badgeLoss": "Loss",
@@ -153,7 +155,14 @@
     "colCost": "Cost",
     "colCurrency": "Currency",
     "kindDividend": "Dividend",
-    "kindInterest": "Interest"
+    "kindInterest": "Interest",
+    "colQty": "Qty",
+    "colStatus": "Status",
+    "inYearBadge": "In {year}",
+    "otherYearBadge": "Year {year}",
+    "lotsCount": "{inYear} of {total} in {year}",
+    "otherYearWarning": "{outCount} sale(s) below are from other tax years — shown so you have the full picture, but they are NOT part of your {year} return.",
+    "nativeGainNote": "Gain/Loss here is nominal, in the trade’s currency. Your taxable amount is the shekel “real gain”, calculated on the summary screen."
   },
   "step4": {
     "title": "Tax Summary — {year}",
