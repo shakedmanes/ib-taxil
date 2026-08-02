@@ -1,21 +1,19 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import type { IBKRData } from '@/lib/ibkr/types'
 
 interface Props { data: IBKRData }
 
+// High-level counts of what was parsed from the Flex Query (pre-calculation).
 export function SummaryCards({ data }: Props) {
-  const totalTrades = data.trades.length
-  const totalDivs   = data.dividends.length
-  const sellTrades  = data.trades.filter(t => t.tradeType === 'sell')
-  const gains       = sellTrades.filter(t => Number(t.gainLossUsd) > 0)
-  const losses      = sellTrades.filter(t => Number(t.gainLossUsd) < 0)
+  const t = useTranslations('summaryCards')
 
   const cards = [
-    { label: 'Total Trades', value: String(totalTrades) },
-    { label: 'Gains',        value: String(gains.length) },
-    { label: 'Losses',       value: String(losses.length) },
-    { label: 'Dividends',    value: String(totalDivs) },
+    { label: t('closedLots'), value: String(data.closedLots.length) },
+    { label: t('dividends'), value: String(data.dividends.length) },
+    { label: t('interest'), value: String(data.interest.length) },
+    { label: t('quarantined'), value: String(data.outOfScope.length) },
   ]
 
   return (

@@ -1,44 +1,21 @@
-import { buildRatesMap, getRateForDate } from '@/lib/boi/rates'
-import type { ExchangeRate } from '@/lib/boi/types'
+import { describe, it, expect, vi } from 'vitest'
+import { assembleRatesMap, fetchRatesMap } from '@/lib/boi/rates'
 
-const MOCK_RATES: ExchangeRate[] = [
-  { date: '2024-03-14', usdToIls: '3.70' },
-  { date: '2024-03-15', usdToIls: '3.72' },
-  { date: '2024-03-18', usdToIls: '3.75' }, // Monday after weekend
-]
-
-describe('buildRatesMap', () => {
-  it('builds a map from date to rate', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    expect(map.get('2024-03-15')).toBe('3.72')
-  })
-
-  it('includes all provided rates', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    expect(map.size).toBe(3)
+describe('assembleRatesMap', () => {
+  it('keys by currency then date', () => {
+    const map = assembleRatesMap({ USD: [{ date: '2024-03-08', rate: '3.65' }], EUR: [{ date: '2024-03-08', rate: '3.95' }] })
+    expect(map.USD['2024-03-08']).toBe('3.65')
+    expect(map.EUR['2024-03-08']).toBe('3.95')
   })
 })
-
-describe('getRateForDate', () => {
-  it('returns exact rate when available', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    expect(getRateForDate(map, '2024-03-15')).toBe('3.72')
-  })
-
-  it('falls back to most recent prior rate for weekends (Saturday)', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    // Saturday 2024-03-16 — should use Friday 2024-03-15
-    expect(getRateForDate(map, '2024-03-16')).toBe('3.72')
-  })
-
-  it('falls back to most recent prior rate for Sundays', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    // Sunday 2024-03-17 — should use Friday 2024-03-15
-    expect(getRateForDate(map, '2024-03-17')).toBe('3.72')
-  })
-
-  it('throws if no prior rate exists within 7 days', () => {
-    const map = buildRatesMap(MOCK_RATES)
-    expect(() => getRateForDate(map, '2024-01-01')).toThrow()
+describe('fetchRatesMap', () => {
+  it('fetches each currency and merges', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (u: string) => new Response(JSON.stringify({
+      currency: u.includes('EUR') ? 'EUR' : 'USD',
+      rates: [{ date: '2024-03-08', rate: u.includes('EUR') ? '3.95' : '3.65' }],
+    }), { status: 200 })))
+    const map = await fetchRatesMap(['USD', 'EUR'], '2024-01-01', '2024-12-31')
+    expect(map.USD['2024-03-08']).toBe('3.65')
+    expect(map.EUR['2024-03-08']).toBe('3.95')
   })
 })

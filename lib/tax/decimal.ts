@@ -48,3 +48,11 @@ export const toIls = (a: string): string =>
 /** Format for display: ₪1,234.56 */
 export const formatIls = (a: string): string =>
   `₪${Number(toIls(a)).toLocaleString('he-IL', { minimumFractionDigits: 2 })}`
+
+/**
+ * Output rounding (ADR-0009): nearest whole shekel, half rounded up.
+ * decimal.js ROUND_HALF_UP rounds .5 away from zero; Israeli חוק עיגול סכומים
+ * rounds a half toward positive infinity, so use ROUND_HALF_CEIL.
+ */
+export const roundShekels = (a: string): string =>
+  new Decimal(a).toDecimalPlaces(0, Decimal.ROUND_HALF_CEIL).toFixed(0)

@@ -13,6 +13,7 @@ import {
   isZero,
   isNeg,
   zero,
+  roundShekels,
 } from '@/lib/tax/decimal'
 
 describe('decimal helpers', () => {
@@ -81,5 +82,24 @@ describe('decimal helpers', () => {
   it('formatIls formats with shekel symbol', () => {
     expect(formatIls('1234.5')).toContain('₪')
     expect(formatIls('1234.5')).toContain('1,234')
+  })
+})
+
+describe('roundShekels', () => {
+  it('rounds to nearest whole shekel', () => {
+    expect(roundShekels('1234.49')).toBe('1234')
+    expect(roundShekels('1234.51')).toBe('1235')
+  })
+  it('rounds a half up', () => {
+    expect(roundShekels('1234.50')).toBe('1235')
+    expect(roundShekels('0.5')).toBe('1')
+  })
+  it('handles negatives half-up (toward positive infinity)', () => {
+    expect(roundShekels('-0.5')).toBe('0')
+    expect(roundShekels('-1234.5')).toBe('-1234')
+  })
+  it('returns an integer string with no decimals', () => {
+    expect(roundShekels('100')).toBe('100')
+    expect(roundShekels('100.00')).toBe('100')
   })
 })

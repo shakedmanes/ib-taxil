@@ -1,56 +1,61 @@
 import ExcelJS from 'exceljs'
-import { toIls } from '@/lib/tax/decimal'
-import type { TaxResult } from '@/lib/tax/types'
+import type { FilingPackage } from './filing-package'
 
-export async function generateExcel(result: TaxResult, taxYear: number): Promise<void> {
+// Renders the Filing Package into a multi-sheet workbook.
+// Pure output: never computes tax — it reads the package only (ADR-0007).
+export async function generateExcel(pkg: FilingPackage): Promise<Blob> {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'IB-Taxil'
   wb.created = new Date()
 
-  // Sheet 1: Summary
-  const summary = wb.addWorksheet('Summary')
-  summary.addRows([
-    [`IB-Taxil Tax Report`, `Tax Year ${taxYear}`],
-    [],
-    ['Category', 'Amount (ILS)'],
-    ['Total Capital Gains', toIls(result.totalCapitalGainsIls)],
-    ['Total Capital Losses', toIls(result.totalCapitalLossesIls)],
-    ['Net Capital Gain', toIls(result.netCapitalGainIls)],
-    ['Capital Gains Tax (25%)', toIls(result.capitalGainsTaxIls)],
-    ['Total Dividends', toIls(result.totalDividendsIls)],
-    ['Dividends Tax', toIls(result.dividendsTaxIls)],
-    ['Foreign Tax Credits', toIls(result.totalForeignTaxCreditIls)],
-    ['TOTAL TAX LIABILITY', toIls(result.totalTaxLiabilityIls)],
+  const s = wb.addWorksheet('Summary')
+  s.addRows([
+    ['Tax year', pkg.summary.taxYear],
+    ['Net capital gain (ILS)', pkg.summary.netCapitalGainIls],
+    ['Capital gains tax (ILS)', pkg.summary.capitalGainsTaxIls],
+    ['Dividends tax (ILS)', pkg.summary.dividendsTaxIls],
+    ['Interest tax (ILS)', pkg.summary.interestTaxIls],
+    ['Foreign tax credit (ILS)', pkg.summary.totalCreditIls],
+    ['Surtax (ILS)', pkg.summary.surtaxIls],
+    ['Total tax liability (ILS)', pkg.summary.totalTaxLiabilityIls],
+    ['Carry-forward loss (ILS)', pkg.summary.carryForwardLossIls],
+    ['Excess credit carry-forward (ILS)', pkg.summary.excessCreditCarryForwardIls],
   ])
 
-  // Sheet 2: Capital Gains
-  const gains = wb.addWorksheet('Capital Gains')
-  gains.addRow(['Ticker', 'Sale Date', 'Buy Date', 'Proceeds (ILS)', 'Cost (ILS)', 'Gain/Loss (ILS)', 'Exchange Rate'])
-  for (const l of result.capitalGainLines) {
-    gains.addRow([l.ticker, l.saleDateStr, l.buyDateStr, l.proceedsIls, l.costIls, l.gainLossIls, l.exchangeRateUsed])
-  }
+  const cg = wb.addWorksheet('Capital Gains')
+  cg.addRow(['Ticker', 'Open date', 'Sale date', 'Open rate', 'Sale rate', 'Proceeds ILS', 'Cost ILS', 'Gain ILS'])
+  pkg.result.capitalGainLines.forEach(l =>
+    cg.addRow([l.ticker, l.openDate, l.saleDate, l.openRate, l.saleRate, l.proceedsIls, l.costIls, l.gainIls]),
+  )
 
-  // Sheet 3: Dividends
-  const divs = wb.addWorksheet('Dividends')
-  divs.addRow(['Ticker', 'Date', 'Gross (ILS)', 'Withheld Tax (ILS)', 'Israeli Tax', 'Foreign Credit', 'Net Tax Due'])
-  for (const l of result.dividendLines) {
-    divs.addRow([l.ticker, l.date, l.grossIls, l.withheldTaxIls, l.israeliTaxDue, l.creditApplied, l.netTaxDue])
-  }
+  const dv = wb.addWorksheet('Dividends')
+  dv.addRow(['Ticker', 'Pay date', 'Gross ILS', 'Rate %', 'Israeli tax ILS', 'Credit ILS', 'Net tax ILS', 'Over-withheld ILS'])
+  pkg.result.dividendLines.forEach(l =>
+    dv.addRow([l.ticker, l.payDate, l.grossIls, l.rate, l.israeliTaxIls, l.creditIls, l.netTaxIls, l.overWithheldIls]),
+  )
 
-  // Sheet 4: Exchange Rates
-  const rates = wb.addWorksheet('Exchange Rates')
-  rates.addRow(['Date', 'USD to ILS (BOI)'])
-  for (const r of result.exchangeRatesUsed) {
-    rates.addRow([r.date, r.rate])
-  }
+  const it = wb.addWorksheet('Interest')
+  it.addRow(['Description', 'Pay date', 'Gross ILS', 'Israeli tax ILS', 'Credit ILS', 'Net tax ILS'])
+  pkg.result.interestLines.forEach(l =>
+    it.addRow([l.description, l.payDate, l.grossIls, l.israeliTaxIls, l.creditIls, l.netTaxIls]),
+  )
 
-  // Write to buffer and trigger browser download
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `IB-Taxil-${taxYear}.xlsx`
-  a.click()
-  URL.revokeObjectURL(url)
+  const cr = wb.addWorksheet('Credits')
+  cr.addRow(['Country', 'Basket', 'Foreign tax ILS', 'Ceiling ILS', 'Credited ILS', 'Excess carry-forward ILS'])
+  pkg.result.countryCredits.forEach(l =>
+    cr.addRow([l.country, l.basket, l.foreignTaxIls, l.ceilingIls, l.creditedIls, l.excessCarryForwardIls]),
+  )
+
+  const rt = wb.addWorksheet('Rates Used')
+  rt.addRow(['Currency', 'Date', 'Rate'])
+  pkg.result.exchangeRatesUsed.forEach(r => rt.addRow([r.currency, r.date, r.rate]))
+
+  const q = wb.addWorksheet('Quarantined')
+  q.addRow(['Kind', 'Description'])
+  pkg.result.quarantined.forEach(x => q.addRow([x.kind, x.description]))
+
+  const buf = await wb.xlsx.writeBuffer()
+  return new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
 }
