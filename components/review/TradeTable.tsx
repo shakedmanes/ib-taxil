@@ -1,92 +1,90 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { IBKRData } from '@/lib/ibkr/types'
 
 interface Props { data: IBKRData }
 
-type Row = { id: string; date: string; ticker: string; type: string; amountUsd: string; gainLoss?: string }
-
+// Read-only preview of parsed records in their native currency. Shekel figures
+// only appear after calculation (rates are fetched at the calculation gate).
 export function TradeTable({ data }: Props) {
+  const t = useTranslations('tradeTable')
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'all' | 'trade' | 'dividend'>('all')
 
-  const rows: Row[] = [
-    ...data.trades.filter(t => t.tradeType === 'sell').map(t => ({
-      id: t.id, date: t.date, ticker: t.ticker,
-      type: 'trade', amountUsd: t.proceedsUsd, gainLoss: t.gainLossUsd,
-    })),
-    ...data.dividends.map(d => ({
-      id: d.id, date: d.date, ticker: d.ticker,
-      type: 'dividend', amountUsd: d.amountUsd,
-    })),
-  ].sort((a, b) => a.date.localeCompare(b.date))
+  const matches = (ticker: string) =>
+    !search || ticker.toLowerCase().includes(search.toLowerCase())
 
-  const visible = rows.filter(r => {
-    if (filter !== 'all' && r.type !== filter) return false
-    if (search && !r.ticker.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
-
-  const badge = (row: Row) => {
-    if (row.type === 'dividend') return <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">Dividend</span>
-    const gl = Number(row.gainLoss ?? '0')
-    if (gl > 0) return <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Gain</span>
-    if (gl < 0) return <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">Loss</span>
-    return <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">Flat</span>
-  }
+  const lots = data.closedLots.filter(l => matches(l.ticker))
+  const income = [
+    ...data.dividends.map(d => ({ id: d.id, ticker: d.ticker, date: d.payDate, kind: t('kindDividend'), amount: d.gross, currency: d.currency })),
+    ...data.interest.map(i => ({ id: i.id, ticker: i.description, date: i.payDate, kind: t('kindInterest'), amount: i.gross, currency: i.currency })),
+  ].filter(r => matches(r.ticker))
 
   return (
-    <div>
-      <div className="flex gap-3 mb-4">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search ticker…"
-          className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-        />
-        <select
-          value={filter}
-          onChange={e => setFilter(e.target.value as 'all' | 'trade' | 'dividend')}
-          className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-        >
-          <option value="all">All</option>
-          <option value="trade">Trades</option>
-          <option value="dividend">Dividends</option>
-        </select>
+    <div className="space-y-6">
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder={t('searchPlaceholder')}
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+      />
+
+      <div>
+        <h4 className="text-xs font-semibold text-slate-500 mb-2">{t('closedLotsTitle')}</h4>
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800">
+              <tr>
+                {[t('colTicker'), t('colOpen'), t('colSale'), t('colProceeds'), t('colCost'), t('colCurrency')].map(h => (
+                  <th key={h} className="px-4 py-2 text-start text-xs font-semibold text-slate-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {lots.map(l => (
+                <tr key={l.id}>
+                  <td className="px-4 py-2 font-mono font-semibold text-slate-900 dark:text-white">{l.ticker}</td>
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{l.openDate}</td>
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{l.saleDate}</td>
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{l.proceeds}</td>
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{l.cost}</td>
+                  <td className="px-4 py-2 text-slate-500">{l.currency}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {lots.length === 0 && <p className="text-center py-6 text-slate-400 text-sm">{t('noRecords')}</p>}
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-800">
-            <tr>
-              {['Date', 'Ticker', 'Type', 'Amount (USD)', 'Gain/Loss (USD)'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {visible.map(row => (
-              <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{row.date}</td>
-                <td className="px-4 py-3 font-mono font-semibold text-slate-900 dark:text-white">{row.ticker}</td>
-                <td className="px-4 py-3">{badge(row)}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">${Number(row.amountUsd).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  {row.gainLoss != null && (
-                    <span className={Number(row.gainLoss) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {Number(row.gainLoss) >= 0 ? '+' : ''}${Number(row.gainLoss).toLocaleString()}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {visible.length === 0 && (
-          <p className="text-center py-8 text-slate-400 text-sm">No records match your filter.</p>
-        )}
-      </div>
+      {income.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 mb-2">{t('incomeTitle')}</h4>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800">
+                <tr>
+                  {[t('colTicker'), t('colDate'), t('colType'), t('colAmount'), t('colCurrency')].map(h => (
+                    <th key={h} className="px-4 py-2 text-start text-xs font-semibold text-slate-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {income.map(r => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2 font-mono font-semibold text-slate-900 dark:text-white">{r.ticker}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{r.date}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{r.kind}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{r.amount}</td>
+                    <td className="px-4 py-2 text-slate-500">{r.currency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

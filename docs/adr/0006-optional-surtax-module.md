@@ -1,0 +1,5 @@
+# Surtax (מס יסף) is an optional module that asks for the user's other income
+
+Surtax is assessed on the user's *total* annual taxable income, but the tool only sees the IBKR slice — so it cannot be computed correctly from IBKR data alone. We add an optional step that asks the user for their total **Other Income** (chiefly salary, from form 106 / תלוש), stacks the IBKR capital income on top, and applies the base surtax plus, for applicable years, the additional capital-income surtax to the portion above the year's threshold. If the user declines, surtax is skipped with a prominent warning.
+
+Boundary trade-off: this deliberately reaches beyond pure IBKR data and asks for sensitive salary income, which the privacy stance would otherwise avoid. Accepted because skipping surtax silently under-reports tax for exactly the target user (a salaried self-directed investor), and "100% correct" cannot tolerate that. The input is manual, in-memory only, never stored — consistent with statelessness.

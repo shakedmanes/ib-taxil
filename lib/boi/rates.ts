@@ -1,46 +1,23 @@
-import type { ExchangeRate, RatesMap } from './types'
+import type { RatesMap } from './types'
 
-const BOI_API =
-  'https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS/EXR/1.0/RER_USD_ILS'
-
-export async function fetchBoiRates(year: number): Promise<ExchangeRate[]> {
-  const url = `${BOI_API}?startperiod=${year}-01-01&endperiod=${year}-12-31&format=jsondata`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`BOI API error: ${res.status} ${res.statusText}`)
-  const json = await res.json() as any
-
-  // BOI SDMX-JSON structure: dates in dimensions, values in dataSets
-  const dates: string[] =
-    json?.structure?.dimensions?.observation?.[0]?.values?.map(
-      (v: { id: string }) => v.id,
-    ) ?? []
-  const observations: Record<string, [number]> =
-    json?.dataSets?.[0]?.series?.['0:0:0:0']?.observations ?? {}
-
-  return dates
-    .map((date, i) => ({
-      date,
-      usdToIls: String(observations[String(i)]?.[0] ?? ''),
-    }))
-    .filter((r) => r.usdToIls !== '')
-}
-
-export function buildRatesMap(rates: ExchangeRate[]): RatesMap {
-  const map: RatesMap = new Map()
-  for (const r of rates) map.set(r.date, r.usdToIls)
+export function assembleRatesMap(perCurrency: Record<string, { date: string; rate: string }[]>): RatesMap {
+  const map: RatesMap = {}
+  for (const [currency, rows] of Object.entries(perCurrency)) {
+    map[currency] = {}
+    for (const r of rows) map[currency][r.date] = r.rate
+  }
   return map
 }
 
-export function getRateForDate(map: RatesMap, date: string): string {
-  if (map.has(date)) return map.get(date)!
-
-  // Walk back up to 7 days to handle weekends and Israeli holidays
-  const d = new Date(date)
-  for (let i = 1; i <= 7; i++) {
-    d.setDate(d.getDate() - 1)
-    const key = d.toISOString().slice(0, 10)
-    if (map.has(key)) return map.get(key)!
-  }
-
-  throw new Error(`No BOI exchange rate found for ${date} or the 7 days prior`)
+export async function fetchRatesMap(currencies: string[], start: string, end: string): Promise<RatesMap> {
+  const results = await Promise.all(currencies.map(async (currency) => {
+    const res = await fetch(`/api/boi-rates?currency=${currency}&startperiod=${start}&endperiod=${end}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error((body as { error?: string }).error ?? `BOI error for ${currency}: ${res.status}`)
+    }
+    const json = await res.json() as { currency: string; rates: { date: string; rate: string }[] }
+    return [currency, json.rates] as const
+  }))
+  return assembleRatesMap(Object.fromEntries(results))
 }

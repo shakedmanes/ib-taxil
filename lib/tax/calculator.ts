@@ -1,137 +1,122 @@
-import { add, sub, mul, pct, abs, min, gt, isNeg, toIls, zero } from './decimal'
+import { add, sub, pct, mul, div, roundShekels, isNeg, gt, zero } from './decimal'
+import { SUPPORTED_YEARS } from './rates'
+import { computeCapitalGains } from './capital-gains'
+import { offsetLosses } from './losses'
+import { computeDividends } from './dividends'
+import { computeInterest } from './interest'
+import { applyForeignTaxCredit } from './foreign-tax-credit'
+import { computeSurtax } from './surtax'
 import type { IBKRData } from '@/lib/ibkr/types'
-import type { RatesMap } from '@/lib/boi/types'
-import type { TaxResult, CapitalGainLine, DividendLine, ForeignIncomeLine } from './types'
-import { getRateForDate } from '@/lib/boi/rates'
+import type { UserInputs } from './user-inputs'
+import type { RatesMap, ExchangeRateUsed } from '@/lib/boi/types'
+import type { EngineOutput, BlockingIssue, QuarantinedItem, CapitalGainLine } from './types'
 
-const CAPITAL_GAINS_RATE = '25'
-const DIVIDEND_RATE = '25'
-const FOREIGN_INCOME_RATE = '25'
+/**
+ * Weighted capital-gains tax: apply each positive lot's rate (25/30) to its
+ * share of the post-offset net gain. If net gain is zero, tax is zero.
+ */
+function capitalGainsTax(lines: CapitalGainLine[], netGainIls: string): string {
+  const positives = lines.filter(l => !isNeg(l.gainIls) && gt(l.gainIls, '0'))
+  const grossPositive = positives.reduce((s, l) => add(s, l.gainIls), zero)
+  if (grossPositive === '0' || netGainIls === '0') return zero
+  return positives.reduce((sum, l) => {
+    const share = mul(netGainIls, div(l.gainIls, grossPositive))
+    const rate = l.isSubstantial ? '30' : '25'
+    return add(sum, pct(share, rate))
+  }, zero)
+}
 
-export function calculateTax(data: IBKRData, rates: RatesMap, taxYear: number): TaxResult {
-  const exchangeRatesUsed: Array<{ date: string; rate: string }> = []
+export function calculateTax(
+  data: IBKRData,
+  rates: RatesMap,
+  taxYear: number,
+  inputs: UserInputs,
+): EngineOutput {
+  const issues: BlockingIssue[] = []
 
-  function convert(amountUsd: string, date: string): string {
-    const rate = getRateForDate(rates, date)
-    if (!exchangeRatesUsed.find(r => r.date === date)) {
-      exchangeRatesUsed.push({ date, rate })
+  if (!SUPPORTED_YEARS.includes(taxYear)) {
+    issues.push({ code: 'unsupported-year', count: 1, explanation: { code: 'block.unsupportedYear', params: { year: String(taxYear) } } })
+    return { status: 'blocked', issues }
+  }
+  if (!data.hasClosedLotSection) {
+    const salesInYear = data.closedLots.filter(l => l.saleDate.startsWith(String(taxYear)))
+    issues.push({ code: 'missing-closed-lots', count: salesInYear.length, explanation: { code: 'block.missingClosedLots', params: { count: String(salesInYear.length) } } })
+    return { status: 'blocked', issues }
+  }
+
+  const usedRates: ExchangeRateUsed[] = []
+  const mergeRates = (rs: ExchangeRateUsed[]) => {
+    for (const r of rs) if (!usedRates.find(u => u.currency === r.currency && u.date === r.date)) usedRates.push(r)
+  }
+
+  try {
+    const cg = computeCapitalGains(data.closedLots, rates, taxYear, inputs.substantialHoldings)
+    mergeRates(cg.usedRates)
+    const dv = computeDividends(data.dividends, rates, taxYear, inputs.substantialHoldings)
+    mergeRates(dv.usedRates)
+    const it = computeInterest(data.interest, rates, taxYear)
+    mergeRates(it.usedRates)
+
+    const dividendIncomeIls = dv.lines.reduce((s, l) => add(s, l.grossIls), zero)
+    const interestIncomeIls = it.lines.reduce((s, l) => add(s, l.grossIls), zero)
+
+    const loss = offsetLosses({
+      gainLines: cg.lines,
+      broughtForwardLoss: inputs.broughtForwardLoss,
+      dividendIncomeIls, interestIncomeIls,
+    })
+
+    const ftc = applyForeignTaxCredit(dv.lines, it.lines)
+
+    const capitalGainsTaxIls = capitalGainsTax(cg.lines, loss.netCapitalGainIls)
+
+    // Net dividend/interest tax after loss income-offset (scaled proportionally) and credit.
+    const incomeBase = add(dividendIncomeIls, interestIncomeIls)
+    const incomeAfterLoss = loss.incomeOffsetRemainingIls
+    const incomeScale = incomeBase === '0' ? '0' : div(incomeAfterLoss, incomeBase)
+    const dividendsGrossTax = ftc.dividendLines.reduce((s, l) => add(s, l.netTaxIls), zero)
+    const interestGrossTax = ftc.interestLines.reduce((s, l) => add(s, l.netTaxIls), zero)
+    const dividendsTaxIls = mul(dividendsGrossTax, incomeScale)
+    const interestTaxIls = mul(interestGrossTax, incomeScale)
+
+    const capitalIncomeIls = add(loss.netCapitalGainIls, incomeAfterLoss)
+    const surtax = computeSurtax({ taxYear, otherIncomeIls: inputs.otherIncomeIls, capitalIncomeIls })
+
+    const totalTax = add(add(add(capitalGainsTaxIls, dividendsTaxIls), interestTaxIls), surtax.surtaxIls)
+
+    const quarantined: QuarantinedItem[] = data.outOfScope.map(o => ({
+      kind: o.kind, description: o.description,
+      explanation: { code: 'explain.quarantined', params: { kind: o.kind, description: o.description } },
+    }))
+
+    return {
+      status: 'ok',
+      taxYear,
+      capitalGainLines: cg.lines,
+      totalGainsIls: loss.totalGainsIls,
+      totalLossesIls: loss.totalLossesIls,
+      currentLossUsedAgainstGainsIls: loss.currentLossUsedAgainstGainsIls,
+      currentLossUsedAgainstIncomeIls: loss.currentLossUsedAgainstIncomeIls,
+      broughtForwardUsedIls: loss.broughtForwardUsedIls,
+      carryForwardLossIls: loss.carryForwardLossIls,
+      netCapitalGainIls: loss.netCapitalGainIls,
+      capitalGainsTaxIls,
+      dividendLines: ftc.dividendLines,
+      interestLines: ftc.interestLines,
+      dividendsTaxIls, interestTaxIls,
+      countryCredits: ftc.countryCredits,
+      totalCreditIls: ftc.totalCreditIls,
+      totalExcessCreditCarryForwardIls: ftc.totalExcessCarryForwardIls,
+      surtaxIls: surtax.surtaxIls,
+      surtaxExplanation: surtax.explanation,
+      totalTaxLiabilityIlsRounded: roundShekels(totalTax),
+      lossOffsetExplanation: loss.explanation,
+      quarantined,
+      exchangeRatesUsed: usedRates,
     }
-    return toIls(mul(amountUsd, rate))
-  }
-
-  // --- Capital Gains ---
-  const capitalGainLines: CapitalGainLine[] = []
-  let totalGains = zero
-  let totalLosses = zero
-
-  for (const trade of data.trades.filter(t => t.tradeType === 'sell')) {
-    const gainLossIls = convert(trade.gainLossUsd, trade.date)
-    const proceedsIls = convert(trade.proceedsUsd, trade.date)
-    const costIls = convert(trade.costUsd, trade.date)
-    const rate = getRateForDate(rates, trade.date)
-
-    capitalGainLines.push({
-      ticker: trade.ticker,
-      description: trade.description,
-      saleDateStr: trade.date,
-      buyDateStr: '',
-      proceedsIls,
-      costIls,
-      gainLossIls,
-      taxUsd: trade.gainLossUsd,
-      exchangeRateUsed: rate,
-    })
-
-    if (isNeg(gainLossIls)) {
-      totalLosses = add(totalLosses, abs(gainLossIls))
-    } else {
-      totalGains = add(totalGains, gainLossIls)
-    }
-  }
-
-  const netCapitalGainIls = gt(totalGains, totalLosses)
-    ? toIls(sub(totalGains, totalLosses))
-    : '0'
-  const capitalGainsTaxIls = toIls(pct(netCapitalGainIls, CAPITAL_GAINS_RATE))
-
-  // --- Dividends ---
-  const dividendLines: DividendLine[] = []
-  let totalDividendsIls = zero
-  let totalDividendsTaxIls = zero
-
-  for (const div of data.dividends) {
-    const grossIls = convert(div.amountUsd, div.date)
-    const withheldIls = convert(div.withheldTaxUsd, div.date)
-    const israeliTaxDue = toIls(pct(grossIls, DIVIDEND_RATE))
-    const creditApplied = toIls(min(withheldIls, israeliTaxDue))
-    const netTaxDue = toIls(sub(israeliTaxDue, creditApplied))
-
-    dividendLines.push({
-      ticker: div.ticker,
-      date: div.date,
-      grossIls,
-      withheldTaxIls: withheldIls,
-      israeliTaxDue,
-      creditApplied,
-      netTaxDue,
-    })
-
-    totalDividendsIls = add(totalDividendsIls, grossIls)
-    totalDividendsTaxIls = add(totalDividendsTaxIls, netTaxDue)
-  }
-
-  // --- Foreign Income ---
-  const foreignIncomeLines: ForeignIncomeLine[] = []
-  let totalForeignIncomeIls = zero
-  let totalForeignIncomeTaxIls = zero
-
-  for (const inc of data.foreignIncome) {
-    const grossIls = convert(inc.amountUsd, inc.date)
-    const withheldIls = convert(inc.withheldTaxUsd, inc.date)
-    const israeliTaxDue = toIls(pct(grossIls, FOREIGN_INCOME_RATE))
-    const creditApplied = toIls(min(withheldIls, israeliTaxDue))
-    const netTaxDue = toIls(sub(israeliTaxDue, creditApplied))
-
-    foreignIncomeLines.push({
-      description: inc.description,
-      date: inc.date,
-      grossIls,
-      withheldTaxIls: withheldIls,
-      israeliTaxDue,
-      creditApplied,
-      netTaxDue,
-    })
-
-    totalForeignIncomeIls = add(totalForeignIncomeIls, grossIls)
-    totalForeignIncomeTaxIls = add(totalForeignIncomeTaxIls, netTaxDue)
-  }
-
-  const totalForeignTaxCreditIls = toIls(
-    add(
-      dividendLines.reduce((s, d) => add(s, d.creditApplied), zero),
-      foreignIncomeLines.reduce((s, f) => add(s, f.creditApplied), zero),
-    ),
-  )
-
-  const totalTaxLiabilityIls = toIls(
-    add(add(capitalGainsTaxIls, totalDividendsTaxIls), totalForeignIncomeTaxIls),
-  )
-
-  return {
-    taxYear,
-    totalCapitalGainsIls: toIls(totalGains),
-    totalCapitalLossesIls: toIls(totalLosses),
-    netCapitalGainIls,
-    capitalGainsTaxIls,
-    totalDividendsIls: toIls(totalDividendsIls),
-    dividendsTaxIls: toIls(totalDividendsTaxIls),
-    totalForeignIncomeIls: toIls(totalForeignIncomeIls),
-    foreignIncomeTaxIls: toIls(totalForeignIncomeTaxIls),
-    totalForeignTaxCreditIls,
-    totalTaxLiabilityIls,
-    capitalGainLines,
-    dividendLines,
-    foreignIncomeLines,
-    exchangeRatesUsed,
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    issues.push({ code: 'missing-rate', count: 1, explanation: { code: 'block.missingRate', params: { detail: msg } } })
+    return { status: 'blocked', issues }
   }
 }
