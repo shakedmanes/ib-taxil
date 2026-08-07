@@ -29,12 +29,14 @@ export async function GET(req: NextRequest) {
 
   const xml = await res.text()
 
-  // Extract all <Obs TIME_PERIOD="YYYY-MM-DD" OBS_VALUE="N.NNN" .../> entries
-  const obsPattern = /TIME_PERIOD="(\d{4}-\d{2}-\d{2})"[^/]*OBS_VALUE="([^"]+)"/g
+  // Extract each observation's TIME_PERIOD + OBS_VALUE. Match the element first,
+  // then pull each attribute independently — XML attribute order is not guaranteed,
+  // so we must not assume TIME_PERIOD comes before OBS_VALUE.
   const rates: { date: string; rate: string }[] = []
-  let m: RegExpExecArray | null
-  while ((m = obsPattern.exec(xml)) !== null) {
-    rates.push({ date: m[1], rate: m[2] })
+  for (const [element] of xml.matchAll(/<[^>]*(?:TIME_PERIOD|OBS_VALUE)="[^"]*"[^>]*>/g)) {
+    const date = /TIME_PERIOD="(\d{4}-\d{2}-\d{2})"/.exec(element)?.[1]
+    const rate = /OBS_VALUE="([^"]+)"/.exec(element)?.[1]
+    if (date && rate) rates.push({ date, rate })
   }
 
   if (rates.length === 0) {

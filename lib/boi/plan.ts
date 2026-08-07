@@ -9,7 +9,11 @@ export function neededCurrencies(data: IBKRData): string[] {
 }
 
 export function dateSpan(data: IBKRData, taxYear: number): { start: string; end: string } {
-  const dates = [`${taxYear}-01-01`, ...data.closedLots.map(l => l.openDate)].filter(Boolean)
+  // Start no later than mid-December of the prior year so getRate always has a
+  // published rate on or before any early-January income date (BOI publishes no
+  // Jan-1 rate; without this buffer an income-only file could block on 'missing-rate').
+  const buffer = `${taxYear - 1}-12-15`
+  const dates = [buffer, ...data.closedLots.map(l => l.openDate)].filter(Boolean)
   const start = dates.sort()[0]
   return { start, end: `${taxYear}-12-31` }
 }

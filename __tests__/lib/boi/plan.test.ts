@@ -18,4 +18,8 @@ describe('boi plan', () => {
   it('spans from earliest open date to tax-year end', () => {
     expect(dateSpan(data, 2024)).toEqual({ start: '2019-05-01', end: '2024-12-31' })
   })
+  it('starts in mid-December of the prior year when there is no earlier lot (income-only buffer)', () => {
+    const incomeOnly: IBKRData = { ...data, closedLots: [] }
+    expect(dateSpan(incomeOnly, 2024)).toEqual({ start: '2023-12-15', end: '2024-12-31' })
+  })
 })
