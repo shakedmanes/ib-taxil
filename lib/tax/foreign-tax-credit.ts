@@ -1,4 +1,4 @@
-import { add, sub, min, pct, max, zero } from './decimal'
+import { add, sub, min, pct, max, mul, div, zero } from './decimal'
 import { explainCredit } from './explain'
 import type { DividendLine, InterestLine, CountryCreditLine } from './types'
 
@@ -47,10 +47,14 @@ export function applyForeignTaxCredit(
       const credited = min(poolCreditable, ceiling)
       const excess = max(sub(poolCreditable, ceiling), zero)
       // distribute credit across lines proportional to each line's Israeli tax
+      // (the ceiling is the sum of those taxes); the last line absorbs any
+      // rounding remainder so the per-line shares sum exactly to `credited`.
       let creditLeft = credited
       idxs.forEach((i, k) => {
         const l = lines[i]
-        const share = k === idxs.length - 1 ? creditLeft : min(l.israeliTaxIls, creditLeft)
+        const share = k === idxs.length - 1
+          ? creditLeft
+          : ceiling === zero ? zero : min(mul(credited, div(l.israeliTaxIls, ceiling)), creditLeft)
         l.creditIls = share
         l.netTaxIls = sub(l.israeliTaxIls, share)
         creditLeft = sub(creditLeft, share)
