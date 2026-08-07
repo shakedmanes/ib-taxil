@@ -4,6 +4,10 @@
 /node_modules
 workers/*/node_modules
 /.pnp
+
+# wrangler local state / cache (Cloudflare Worker dev)
+.wrangler/
+workers/*/.wrangler/
 .pnp.*
 .yarn/*
 !.yarn/patches
