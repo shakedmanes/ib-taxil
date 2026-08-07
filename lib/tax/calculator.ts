@@ -79,6 +79,14 @@ export function calculateTax(
     const dividendsTaxIls = mul(dividendsGrossTax, incomeScale)
     const interestTaxIls = mul(interestGrossTax, incomeScale)
 
+    // Keep the reported credit in sync with the loss-scaled tax: when current-year
+    // losses offset dividend/interest income, that income is no longer taxed, so the
+    // foreign tax credited against it can't be used this year — report only the
+    // usable credit and carry the rest forward (§205א). incomeScale is 1 when no
+    // losses spill onto income, leaving the common case unchanged.
+    const usedCreditIls = mul(ftc.totalCreditIls, incomeScale)
+    const excessCreditCarryForwardIls = add(ftc.totalExcessCarryForwardIls, sub(ftc.totalCreditIls, usedCreditIls))
+
     const capitalIncomeIls = add(loss.netCapitalGainIls, incomeAfterLoss)
     const surtax = computeSurtax({ taxYear, otherIncomeIls: inputs.otherIncomeIls, capitalIncomeIls })
 
@@ -113,8 +121,8 @@ export function calculateTax(
       interestLines: ftc.interestLines,
       dividendsTaxIls, interestTaxIls,
       countryCredits: ftc.countryCredits,
-      totalCreditIls: ftc.totalCreditIls,
-      totalExcessCreditCarryForwardIls: ftc.totalExcessCarryForwardIls,
+      totalCreditIls: usedCreditIls,
+      totalExcessCreditCarryForwardIls: excessCreditCarryForwardIls,
       surtaxIls: surtax.surtaxIls,
       surtaxExplanation: surtax.explanation,
       totalTaxLiabilityIlsRounded: roundShekels(totalTax),
@@ -124,7 +132,17 @@ export function calculateTax(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    issues.push({ code: 'missing-rate', count: 1, explanation: { code: 'block.missingRate', params: { detail: msg } } })
-    return { status: 'blocked', issues }
+    // A currency with no rates at all is a scope problem, not a missing day.
+    if (/No exchange rates loaded for currency|Unsupported currency/i.test(msg)) {
+      issues.push({ code: 'unsupported-currency', count: 1, explanation: { code: 'block.unsupportedCurrency', params: {} } })
+      return { status: 'blocked', issues }
+    }
+    // A specific date with no rate on or before it is a genuine data gap.
+    if (/rate published on or before|exchange rate/i.test(msg)) {
+      issues.push({ code: 'missing-rate', count: 1, explanation: { code: 'block.missingRate', params: { detail: msg } } })
+      return { status: 'blocked', issues }
+    }
+    // Anything else is a real bug — surface it instead of mislabeling it as data.
+    throw err
   }
 }

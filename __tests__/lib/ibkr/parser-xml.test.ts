@@ -48,6 +48,22 @@ const lotXml = `<FlexQueryResponse><FlexStatements><FlexStatement accountId="U2"
   </Trades>
 </FlexStatement></FlexStatements></FlexQueryResponse>`
 
+// Foreign interest can carry withholding tax, paired like a dividend by date.
+const interestWhXml = `<FlexQueryResponse><FlexStatements><FlexStatement accountId="U3" currency="USD">
+  <CashTransactions>
+    <CashTransaction type="Broker Interest Received" description="Foreign bank interest" currency="USD" amount="200" settleDate="20240705" issuerCountryCode="GB"/>
+    <CashTransaction type="Withholding Tax" description="Foreign bank interest" currency="USD" amount="-30" settleDate="20240705"/>
+  </CashTransactions>
+</FlexStatement></FlexStatements></FlexQueryResponse>`
+
+describe('parseFlexXml interest withholding', () => {
+  it('captures foreign tax withheld on interest instead of dropping it', () => {
+    const data = parseFlexXml(interestWhXml)
+    expect(data.interest).toHaveLength(1)
+    expect(data.interest[0]).toMatchObject({ gross: '200', withheldTax: '30', sourceCountry: 'GB' })
+  })
+})
+
 describe('parseFlexXml with <Lot> closed lots', () => {
   const data = parseFlexXml(lotXml)
   it('reads the Lot element as a closed lot', () => {

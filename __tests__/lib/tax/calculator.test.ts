@@ -59,4 +59,12 @@ describe('calculateTax', () => {
     expect(out.status).toBe('blocked')
     if (out.status === 'blocked') expect(out.issues[0].code).toBe('missing-rate')
   })
+  it('labels a currency with no rates as unsupported-currency, not missing-rate', () => {
+    const eurLot = data({
+      closedLots: [{ id: 'l1', ticker: 'SAP', description: 'SAP', currency: 'EUR', quantity: 10, openDate: '2024-02-15', saleDate: '2024-06-30', proceeds: '1200', cost: '1000', method: 'FIFO' }],
+    })
+    const out = calculateTax(eurLot, rates, 2024, baseInputs) // rates has only USD
+    expect(out.status).toBe('blocked')
+    if (out.status === 'blocked') expect(out.issues[0].code).toBe('unsupported-currency')
+  })
 })

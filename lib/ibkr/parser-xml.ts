@@ -58,7 +58,10 @@ export function parseFlexXml(xml: string): IBKRData {
     if (cls === 'dividend') {
       dividends.push({ id: id(c.transactionID, 'div', dividends.length), ticker: String(c.symbol ?? ''), description: String(c.description ?? ''), currency: String(c.currency ?? baseCurrency), payDate: date, gross: absStr(c.amount), withheldTax: withholding.get(`${c.symbol}|${date}`) ?? '0', sourceCountry: String(c.issuerCountryCode ?? '') })
     } else if (cls === 'interest') {
-      interest.push({ id: id(c.transactionID, 'int', interest.length), description: String(c.description ?? ''), currency: String(c.currency ?? baseCurrency), payDate: date, gross: absStr(c.amount), withheldTax: '0', sourceCountry: String(c.issuerCountryCode ?? '') })
+      // Foreign tax withheld on interest is a 'Withholding Tax' cash transaction,
+      // paired by symbol|date exactly like dividends (interest usually has an
+      // empty symbol, so it keys as '|date'). Don't drop it — it drives the FTC.
+      interest.push({ id: id(c.transactionID, 'int', interest.length), description: String(c.description ?? ''), currency: String(c.currency ?? baseCurrency), payDate: date, gross: absStr(c.amount), withheldTax: withholding.get(`${c.symbol}|${date}`) ?? '0', sourceCountry: String(c.issuerCountryCode ?? '') })
     } else if (cls === 'out-of-scope') {
       outOfScope.push({ id: id(c.transactionID, 'oos', outOfScope.length), kind: 'bond-interest', description: String(c.description ?? ''), raw: String(c.type) })
     }

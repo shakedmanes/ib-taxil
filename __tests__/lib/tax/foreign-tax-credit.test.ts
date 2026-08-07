@@ -24,7 +24,21 @@ describe('applyForeignTaxCredit', () => {
     // two US dividends, each Israeli tax 250; one withheld 250, one withheld 150 -> pooled 400 vs ceiling 500 => credit 400
     const r = applyForeignTaxCredit([dLine({ withheldIls: '250' }), dLine({ withheldIls: '150' })], [])
     expect(r.totalCreditIls).toBe('400')
-    expect(r.dividendLines[0].netTaxIls === '0' || r.dividendLines[1].netTaxIls === '0').toBe(true)
+    // credit is distributed proportionally to each line's Israeli tax (250/250),
+    // so both lines share it equally — not greedily assigned to one line.
+    expect(r.dividendLines[0].creditIls).toBe('200')
+    expect(r.dividendLines[1].creditIls).toBe('200')
+    expect(r.dividendLines[0].netTaxIls).toBe('50')
+    expect(r.dividendLines[1].netTaxIls).toBe('50')
+  })
+  it('distributes credit proportionally to each line Israeli tax, remainder on the last line', () => {
+    // ceiling 300 (100+200); pooled withholding 120 credit -> 40 / 80 split
+    const r = applyForeignTaxCredit(
+      [dLine({ grossIls: '400', israeliTaxIls: '100', withheldIls: '60' }),
+       dLine({ grossIls: '800', israeliTaxIls: '200', withheldIls: '60' })], [])
+    expect(r.totalCreditIls).toBe('120')
+    expect(r.dividendLines[0].creditIls).toBe('40')  // 120 * 100/300
+    expect(r.dividendLines[1].creditIls).toBe('80')  // remainder
   })
   it('flags dividend over-withholding above the 25% treaty cap', () => {
     // withheld 300 on gross 1000 -> cap 250; 50 is over-withheld, credit capped at 250
