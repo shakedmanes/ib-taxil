@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { add, formatIls, gt, zero } from '@/lib/tax/decimal'
+import { add, formatIls, formatShekels, gt, zero } from '@/lib/tax/decimal'
 import { Explain } from '@/components/common/Explain'
 import { itaFieldCode, isYearVerified, type FieldKey } from '@/lib/reports/field-codes'
 import type { TaxResult, DividendLine, InterestLine } from '@/lib/tax/types'
@@ -112,9 +112,9 @@ export function Step7Filing({ result, onBack }: Props) {
                   </tbody>
                 </table>
               </div>
-              <FieldRow {...badge('capitalGainsTurnover')} label={t('turnoverLabel')} value={formatIls(turnover)} />
-              <FieldRow {...badge('capitalGainsDetail')} label={t('netGainLabel')} value={formatIls(result.netCapitalGainIls)} />
-              <FieldRow {...badge('capitalGainsDetail')} label={t('capitalTaxLabel')} value={formatIls(result.capitalGainsTaxIls)} />
+              <FieldRow {...badge('capitalGainsTurnover')} label={t('turnoverLabel')} value={formatShekels(turnover)} />
+              <FieldRow {...badge('capitalGainsDetail')} label={t('netGainLabel')} value={formatShekels(result.netCapitalGainIls)} />
+              <FieldRow {...badge('capitalGainsDetail')} label={t('capitalTaxLabel')} value={formatShekels(result.capitalGainsTaxIls)} />
               <p className="text-xs text-slate-500">{t('lossNote')}</p>
               <Explain explanation={result.lossOffsetExplanation} />
             </>
@@ -123,9 +123,9 @@ export function Step7Filing({ result, onBack }: Props) {
 
         <Stage n={3} title={t('stage3Title')}>
           <p>{t('stage3Body')}</p>
-          <FieldRow {...badge('dividend25')} label={t('dividendsGrossLabel')} value={formatIls(dividendsGross)} />
-          <FieldRow {...badge('interest25')} label={t('interestGrossLabel')} value={formatIls(interestGross)} />
-          <FieldRow {...badge('foreignIncomeTotal')} label={t('foreignIncomeTotalLabel')} value={formatIls(add(dividendsGross, interestGross))} />
+          <FieldRow {...badge('dividend25')} label={t('dividendsGrossLabel')} value={formatShekels(dividendsGross)} />
+          <FieldRow {...badge('interest25')} label={t('interestGrossLabel')} value={formatShekels(interestGross)} />
+          <FieldRow {...badge('foreignIncomeTotal')} label={t('foreignIncomeTotalLabel')} value={formatShekels(add(dividendsGross, interestGross))} />
           {result.countryCredits.length > 0 && (
             <>
               <p className="font-medium text-slate-700 dark:text-slate-200">{t('creditIntro')}</p>
@@ -154,7 +154,7 @@ export function Step7Filing({ result, onBack }: Props) {
               </div>
             </>
           )}
-          <FieldRow {...badge('ftcDividendTax')} label={t('creditTotalLabel')} value={formatIls(result.totalCreditIls)} />
+          <FieldRow {...badge('ftcDividendTax')} label={t('creditTotalLabel')} value={formatShekels(result.totalCreditIls)} />
           <p className="text-xs text-slate-500">{t('ftcBoxesNote')}</p>
         </Stage>
 
@@ -163,13 +163,13 @@ export function Step7Filing({ result, onBack }: Props) {
           {result.surtaxExplanation
             ? <Explain explanation={result.surtaxExplanation} />
             : <p className="text-slate-400">{t('surtaxSkipped')}</p>}
-          <FieldRow {...badge('surtax')} label={t('surtaxLabel')} value={formatIls(result.surtaxIls)} />
+          <FieldRow {...badge('surtax')} label={t('surtaxLabel')} value={formatShekels(result.surtaxIls)} />
         </Stage>
 
         <Stage n={5} title={t('stage5Title')}>
           <p>{t('stage5Body')}</p>
-          <FieldRow badge={t('recordKeep')} label={t('carryLossLabel')} value={formatIls(result.carryForwardLossIls)} />
-          <FieldRow badge={t('recordKeep')} label={t('excessCreditLabel')} value={formatIls(result.totalExcessCreditCarryForwardIls)} />
+          <FieldRow badge={t('recordKeep')} label={t('carryLossLabel')} value={formatShekels(result.carryForwardLossIls)} />
+          <FieldRow badge={t('recordKeep')} label={t('excessCreditLabel')} value={formatShekels(result.totalExcessCreditCarryForwardIls)} />
         </Stage>
 
         <Stage n={6} title={t('stage6Title')}>
@@ -192,7 +192,7 @@ export function Step7Filing({ result, onBack }: Props) {
 
         <Stage n={7} title={t('stage7Title')}>
           <p>{t('stage7Body')}</p>
-          <FieldRow badge="1301" label={t('totalLabel')} value={formatIls(result.totalTaxLiabilityIlsRounded)} />
+          <FieldRow badge="1301" label={t('totalLabel')} value={formatShekels(result.totalTaxLiabilityIlsRounded)} />
           <p className="text-xs text-slate-500">{t('signOffNote')}</p>
         </Stage>
       </div>

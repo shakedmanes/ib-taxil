@@ -5,7 +5,7 @@ import { generatePdf } from '@/lib/reports/pdf'
 import { generateExcel } from '@/lib/reports/excel'
 import { buildFilingPackage } from '@/lib/reports/filing-package'
 import { mapToFields } from '@/lib/reports/field-map'
-import { formatIls } from '@/lib/tax/decimal'
+import { formatShekels } from '@/lib/tax/decimal'
 import type { TaxResult } from '@/lib/tax/types'
 
 interface Props { result: TaxResult }
@@ -82,7 +82,7 @@ export function ExportPanel({ result }: Props) {
               <p className="text-sm text-slate-900 dark:text-white">{tField(f.labelKey)}</p>
             </div>
             <p className="text-lg font-bold text-blue-700 dark:text-blue-300 font-mono whitespace-nowrap">
-              {formatIls(f.valueIls)}
+              {formatShekels(f.valueIls)}
             </p>
           </div>
         ))}

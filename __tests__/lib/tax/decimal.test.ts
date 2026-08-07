@@ -9,6 +9,7 @@ import {
   min,
   toIls,
   formatIls,
+  formatShekels,
   abs,
   isZero,
   isNeg,
@@ -101,5 +102,16 @@ describe('roundShekels', () => {
   it('returns an integer string with no decimals', () => {
     expect(roundShekels('100')).toBe('100')
     expect(roundShekels('100.00')).toBe('100')
+  })
+})
+
+describe('formatShekels', () => {
+  it('formats a form-field entry as whole shekels with the ₪ symbol', () => {
+    expect(formatShekels('1234.51')).toBe('₪1,235')
+    expect(formatShekels('210238.460829128')).toBe('₪210,238')
+  })
+  it('has no agorot / decimal point', () => {
+    expect(formatShekels('4.55598')).toBe('₪5')
+    expect(formatShekels('4.55598')).not.toContain('.')
   })
 })

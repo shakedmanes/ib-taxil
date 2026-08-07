@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { mapToFields } from './field-map'
+import { roundShekels } from '@/lib/tax/decimal'
 import type { FilingPackage } from './filing-package'
 
 // Renders the Filing Package summary + ITA field map + disclaimer.
@@ -11,8 +12,10 @@ export async function generatePdf(pkg: FilingPackage): Promise<Blob> {
 
   doc.setFontSize(11)
   let y = 30
+  // Summary figures are shown in whole shekels (חוק עיגול סכומים); the engine
+  // keeps full precision, and the Excel workbook carries the exact breakdown.
   const line = (k: string, v: string) => {
-    doc.text(`${k}: ${v}`, 14, y)
+    doc.text(`${k}: ${roundShekels(v)}`, 14, y)
     y += 8
   }
   line('Net capital gain (ILS)', pkg.summary.netCapitalGainIls)
