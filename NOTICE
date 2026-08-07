@@ -1,0 +1,31 @@
+IB-Taxil
+Copyright 2026 Shaked Manes and the IB-Taxil contributors
+
+This product is licensed under the Apache License, Version 2.0 (the "License");
+you may not use this software except in compliance with the License. A copy of
+the License is provided in the LICENSE file and at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+--------------------------------------------------------------------------------
+
+IMPORTANT — NOT TAX OR LEGAL ADVICE
+
+IB-Taxil is an educational aid that produces automated estimates of the
+investment portion of an Israeli individual income-tax return. It is not tax,
+legal, or accounting advice, comes with no warranty, and must not be relied upon
+for filing without review by a licensed Israeli tax professional. See DISCLAIMER.md.
+
+IB-Taxil is an independent project and is not affiliated with, endorsed by, or
+sponsored by the Israel Tax Authority (רשות המסים), Interactive Brokers, or the
+Bank of Israel. Product names and trademarks belong to their respective owners.
+
+--------------------------------------------------------------------------------
+
+This product uses data from the Bank of Israel (BOI) SDMX exchange-rate API.
+The Bank of Israel does not endorse this product.

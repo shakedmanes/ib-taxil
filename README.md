@@ -1,478 +1,243 @@
 # IB-Taxil
 
-A privacy-first, browser-based Israeli tax return generator for Interactive Brokers (IBKR) accounts.
+> Turn your Interactive Brokers activity into the investment figures for your
+> Israeli individual tax return — privately, in your browser.
 
-IB-Taxil fetches your IBKR trading data, converts all amounts to ILS using Bank of Israel representative exchange rates, calculates your capital gains tax and dividend tax under Israeli law, and produces a pre-filled tax form ready to submit to the Israeli Tax Authority (ITA).
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![CI](https://github.com/shakedmanes/ib-taxil/actions/workflows/ci.yml/badge.svg)](https://github.com/shakedmanes/ib-taxil/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-131_passing-brightgreen.svg)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-86%25_lines-brightgreen.svg)](#testing)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+[![i18n: he + en](https://img.shields.io/badge/i18n-עברית_%7C_English-informational.svg)](#internationalization-i18n)
 
-**All processing happens in your browser. Nothing is stored on any server.**
+IB-Taxil takes an Interactive Brokers (IBKR) **Flex Query** export, converts every
+amount to shekels using **Bank of Israel** representative rates, applies the
+Israeli tax rules for investment income, and hands you **form-ready numbers** plus
+a step-by-step guide to where each one goes on the ITA forms.
+
+**Everything runs in your browser. No account, no backend database, no analytics.**
+
+> [!IMPORTANT]
+> IB-Taxil is a **calculation aid, not tax advice**, and it covers only the
+> *investment portion* of a return. Its numbers are estimates you must verify with
+> a licensed Israeli tax professional (רו״ח / יועץ מס) before filing. It is not
+> affiliated with the Israel Tax Authority, Interactive Brokers, or the Bank of
+> Israel. **Please read the [full disclaimer](./DISCLAIMER.md).**
 
 ---
 
-## Table of Contents
+## Table of contents
 
-- [Features](#features)
-- [How It Works](#how-it-works)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started (Development)](#getting-started-development)
-- [Environment Variables](#environment-variables)
-- [Running the Cloudflare Worker Locally](#running-the-cloudflare-worker-locally)
+- [What it does](#what-it-does)
+- [What it does *not* do](#what-it-does-not-do)
+- [Supported tax years](#supported-tax-years)
+- [How it works](#how-it-works)
+- [Tax methodology](#tax-methodology)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
 - [Testing](#testing)
-- [Internationalization (i18n)](#internationalization-i18n)
-- [Tax Calculation Logic](#tax-calculation-logic)
-- [Data Flow](#data-flow)
-- [Deployment](#deployment)
+- [Project structure](#project-structure)
+- [Roadmap](#roadmap)
 - [Contributing](#contributing)
+- [License & legal](#license--legal)
 
----
+## What it does
 
-## Features
+- 📥 **Import** — upload an IBKR Flex Query XML/CSV, or pull it via the Flex Web
+  Service (through an optional CORS proxy). A built-in guide walks you through
+  generating a Flex Query with the required **Closed Lots** section.
+- 💱 **Convert** — fetches daily **USD→ILS** (and other) Bank of Israel rates and
+  applies the correct representative rate for each open and sale date, with the
+  last-published-rate fallback for weekends/holidays.
+- 🧮 **Calculate** the investment portion under Israeli law:
+  - **Capital gains** on the *shekel real gain* (§§88/91) at 25% / 30%
+  - **Loss offsetting** (§92): current losses against gains, then income; plus
+    brought-forward losses and carry-forward
+  - **Foreign dividends** (§125ב) and **interest** (§125ג)
+  - **Foreign tax credit** per country basket (§§199–210) with treaty caps and a
+    5-year excess carry-forward (§205א)
+  - **Surtax / מס יסף** (§121ב), including the 2025 capital surtax (Amendment 276)
+  - **Whole-shekel rounding** per *חוק עיגול סכומים* (nearest, half up)
+- 🔎 **Review** every closed lot, marked in-year vs. other years, with a full
+  per-trade breakdown — and an *explanation* for every figure.
+- 📤 **Export** a filled **PDF**, an **Excel** workbook, and a **JSON** package.
+- 📝 **File** — an optional deep walkthrough maps each value to the exact field on
+  forms **1301**, **נספח ג (1322)**, **נספח ג(1) (1325)**, and **נספח ד (1324)**.
+- 🌐 **Bilingual** Hebrew (RTL) + English, with dark/light mode.
 
-- **Two import paths** — connect via IBKR Flex Query API, or upload an exported XML/CSV file directly
-- **Automatic currency conversion** — fetches daily USD→ILS rates from the Bank of Israel (BOI) SDMX API
-- **Israeli tax calculation** — capital gains (25%), dividends (25%), and foreign income, with foreign tax credit offsets
-- **Bilingual UI** — Hebrew (RTL) and English, switchable at runtime via next-intl
-- **Dark / light mode**
-- **Export** — download a pre-filled PDF tax form and a full Excel breakdown workbook
-- **On-screen ITA field guide** — maps calculated values to the exact ITA portal fields to enter when filing
-- **Zero data retention** — no backend, no database, no analytics
+## What it does *not* do
 
----
+IB-Taxil computes **only** the investment portion derived from IBKR closed-lot
+data. It does **not** produce a complete return. Out of scope: salary/employment
+income, business/freelance income, Israeli-source securities, real estate,
+pensions/provident funds, crypto, options/derivatives, other brokers, and personal
+credits/deductions (נקודות זיכוי / ניכויים). It assumes the IBKR data you give it
+is complete for that account. See the [DISCLAIMER](./DISCLAIMER.md).
 
-## How It Works
+## Supported tax years
+
+| Year | Engine | ITA field codes | Notes |
+|------|:------:|:---------------:|-------|
+| **2025** | ✅ confirmed | ✅ verified | includes the 2% capital surtax (Amendment 276) |
+| **2024** | ✅ confirmed | ✅ verified | |
+| 2026+ | 🟡 provisional | ⚠️ unverified | computed by carrying 2025 constants forward — **flagged for confirmation** |
+| ≤ 2023 | ⛔ blocked | — | not supported |
+
+**Provisional years:** when a year's official constants aren't published yet, the
+engine still computes it by carrying the latest confirmed year forward and labels
+the result *provisional* (the inflation-indexed surtax threshold and any new
+legislation must be confirmed). Promoting a provisional year to *confirmed* is a
+one-row change — see [How to add a new tax year](./CONTRIBUTING.md#how-to-add-a-new-tax-year).
+
+## How it works
 
 ```
-User → [Step 1] Select tax year
-     → [Step 2] Import data (API or file upload)
-     → [Step 3] Review trades & dividends, trigger calculation
-     → [Step 4] View tax summary with BOI-converted ILS amounts
-     → [Step 5] Download PDF / Excel, or use on-screen ITA field guide
+Step 1  Choose the tax year
+Step 2  Import IBKR data (file upload or Flex API)
+Step 3  Review trades, dividends & interest — flag substantial holdings
+Step 4  Add details (brought-forward losses, other income for surtax)
+Step 5  See the explained tax summary (fetches BOI rates & calculates)
+Step 6  Export PDF / Excel / JSON
+Step 7  (optional) Full ITA form-filling walkthrough
 ```
 
-### IBKR API path
+The engine is **pure and framework-free**: it takes parsed IBKR data plus a rate
+map and returns an `EngineOutput` that is either a `TaxResult` (with an
+`Explanation` on every figure) or a `BlockedResult` (with fix-it guidance and *no*
+numbers, so partial/ambiguous data never yields a misleading total).
 
-Because browsers cannot call the IBKR Flex Web Service directly (CORS restriction), a thin Cloudflare Worker proxy forwards requests:
+## Tax methodology
 
-```
-Browser → Cloudflare Worker → IBKR Flex API
-                           ← XML report
-Browser ← XML report (CORS headers added)
-```
+Design decisions are documented as ADRs in [`docs/adr/`](./docs/adr):
 
-The proxy does not log or store anything — it is a pass-through relay. Source code is in `workers/ibkr-proxy/`.
+- [0001 — shekel real-gain method](./docs/adr/0001-shekel-real-gain-method.md)
+- [0002 — IBKR closed lots as source of truth](./docs/adr/0002-ibkr-closed-lots-source-of-truth.md)
+- [0004 — stateless loss-offset model](./docs/adr/0004-loss-offset-model-stateless.md)
+- [0005 — explainability is first-class](./docs/adr/0005-explainability-is-first-class.md)
+- [0007 — scope: investment portion](./docs/adr/0007-scope-investment-portion-with-published-contract.md)
+- [0008 — asymmetric completeness policy](./docs/adr/0008-asymmetric-completeness-policy.md)
+- [0009 — full precision, round only at output](./docs/adr/0009-precision-and-rate-fallback.md)
 
-### File upload path
+Field-code sourcing lives in [`docs/ita-field-codes.md`](./docs/ita-field-codes.md);
+tax constants and their sources in [`docs/tax-research-findings.md`](./docs/tax-research-findings.md).
 
-Users download their Flex Query XML or Activity Statement CSV from the IBKR Client Portal directly and drop the file into the app. No proxy is involved.
-
----
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 4 |
-| i18n | next-intl 4 |
-| XML parsing | fast-xml-parser |
-| CSV parsing | PapaParse |
-| Decimal arithmetic | decimal.js |
-| PDF generation | jsPDF |
-| Excel generation | ExcelJS |
-| Testing | Vitest + @testing-library/react |
-| Proxy | Cloudflare Workers (Wrangler 3) |
-| Deployment | Vercel (app) + Cloudflare Workers (proxy) |
+| i18n | next-intl 4 (en + he/RTL) |
+| Money | decimal.js (values are decimal **strings**) |
+| Parsing | fast-xml-parser · PapaParse |
+| Export | jsPDF · ExcelJS |
+| Rates | Bank of Israel SDMX API |
+| Tests | Vitest + @testing-library/react |
+| Proxy (optional) | Cloudflare Worker (IBKR Flex CORS relay) |
 
----
+## Getting started
 
-## Project Structure
-
-```
-ib-taxil/
-├── app/
-│   ├── layout.tsx                  # Root layout (ThemeProvider)
-│   └── [locale]/
-│       ├── layout.tsx              # Locale layout (NextIntlClientProvider, Navbar)
-│       └── page.tsx                # Entry point — renders WizardShell
-│
-├── components/
-│   ├── ui/
-│   │   ├── Navbar.tsx              # Language + dark/light toggle
-│   │   └── ThemeProvider.tsx       # Dark mode context
-│   ├── wizard/
-│   │   ├── WizardShell.tsx         # Manages wizard state (step, data, result)
-│   │   ├── Step1TaxYear.tsx        # Year picker
-│   │   ├── Step2Import.tsx         # Import container (API card + file upload card)
-│   │   ├── Step3Review.tsx         # Trade/dividend review + calculate button
-│   │   ├── Step4Summary.tsx        # Tax summary + breakdown
-│   │   └── Step5Export.tsx         # Export options
-│   ├── import/
-│   │   ├── IBKRApiCard.tsx         # Flex Query token + Query ID form + 7-step guide
-│   │   ├── FileUploadCard.tsx      # Drag-and-drop file upload zone
-│   │   └── PrivacyModal.tsx        # Plain-language privacy explanation modal
-│   ├── review/
-│   │   ├── SummaryCards.tsx        # Trades / Gains / Losses / Dividends count cards
-│   │   └── TradeTable.tsx          # Sortable, filterable trade + dividend table
-│   ├── summary/
-│   │   ├── TaxSummaryHero.tsx      # Net capital gain / dividends / tax liability hero
-│   │   └── TaxBreakdown.tsx        # Collapsible per-trade and per-dividend breakdown
-│   └── export/
-│       └── ExportPanel.tsx         # PDF / Excel download buttons + ITA field guide
-│
-├── lib/
-│   ├── ibkr/
-│   │   ├── types.ts                # Trade, Dividend, ForeignIncome, IBKRData interfaces
-│   │   ├── parser-xml.ts           # Parses IBKR Flex Query XML → IBKRData
-│   │   └── parser-csv.ts           # Parses IBKR Activity Statement CSV → IBKRData
-│   ├── boi/
-│   │   ├── types.ts                # ExchangeRate, RatesMap types
-│   │   └── rates.ts                # Fetches BOI SDMX API, builds date→rate map
-│   ├── tax/
-│   │   ├── types.ts                # TaxResult, CapitalGainLine, DividendLine interfaces
-│   │   ├── calculator.ts           # Core tax calculation (capital gains + dividends)
-│   │   └── decimal.ts              # Decimal.js helpers (add, mul, pct, formatIls, …)
-│   └── reports/
-│       ├── pdf.ts                  # Generates PDF via jsPDF
-│       └── excel.ts                # Generates Excel workbook via ExcelJS
-│
-├── messages/
-│   ├── en.json                     # English translations (all UI strings)
-│   └── he.json                     # Hebrew translations (all UI strings)
-│
-├── workers/
-│   └── ibkr-proxy/
-│       ├── src/index.ts            # Cloudflare Worker — CORS proxy for IBKR API
-│       ├── wrangler.toml           # Worker config (name, allowed origin)
-│       └── package.json
-│
-├── __tests__/                      # Vitest test files (mirrors src structure)
-├── __mocks__/
-│   └── next-intl.ts                # Manual mock for useTranslations in tests
-│
-├── i18n.ts                         # next-intl config (locales: en, he)
-├── next.config.ts                  # Next.js config with next-intl plugin
-├── vitest.config.ts                # Vitest config (jsdom, path aliases)
-└── vitest.setup.ts                 # Test setup (jest-dom, localStorage polyfill)
-```
-
----
-
-## Getting Started (Development)
-
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-
-### Install and run
+**Prerequisites:** Node.js 20+, npm 10+.
 
 ```bash
-# 1. Clone the repository
-git clone <repo-url>
+git clone https://github.com/shakedmanes/ib-taxil.git
 cd ib-taxil
-
-# 2. Install dependencies
 npm install
-
-# 3. Start the development server
-npm run dev
+npm run dev          # http://localhost:3000  (→ /en; Hebrew at /he)
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The app redirects to `/en` by default. Switch to Hebrew at `/he`.
-
----
-
-## Environment Variables
-
-Create a `.env.local` file in the project root if you need to override defaults:
+The **file-upload** path needs no configuration. The **IBKR API** path needs the
+optional proxy (browsers can't call the Flex Web Service directly):
 
 ```bash
-# URL of the IBKR proxy worker.
-# Defaults to a placeholder value — override this to point at your deployed
-# Cloudflare Worker or at the local worker dev server.
-NEXT_PUBLIC_PROXY_URL=http://localhost:8787
-```
-
-This variable is only needed for the IBKR API (Flex Query token) import path. The file upload path works without it.
-
----
-
-## Running the Cloudflare Worker Locally
-
-The Cloudflare Worker proxies IBKR Flex API calls to work around browser CORS restrictions.
-
-```bash
-# 1. Install worker dependencies
-cd workers/ibkr-proxy
-npm install
-
-# 2. Start the local worker dev server
-npm run dev
-# Worker is now available at http://localhost:8787
-```
-
-Then tell the Next.js app to use the local worker:
-
-```bash
-# In the project root
+# terminal 1 — proxy
+cd workers/ibkr-proxy && npm install && npm run dev   # http://localhost:8787
+# terminal 2 — app
 NEXT_PUBLIC_PROXY_URL=http://localhost:8787 npm run dev
 ```
-
-Or add it permanently to `.env.local`:
-
-```bash
-NEXT_PUBLIC_PROXY_URL=http://localhost:8787
-```
-
-The worker already permits any `localhost` / `127.0.0.1` origin without additional configuration — the `ALLOWED_ORIGIN` restriction in `wrangler.toml` only applies to production traffic.
-
-### Worker endpoints
-
-| Query parameters | Description |
-|---|---|
-| `?action=send&t=<token>&q=<queryId>` | Phase 1 — submits the Flex Query request, returns an XML response containing a reference code |
-| `?action=get&q=<referenceCode>` | Phase 2 — fetches the generated XML report using the reference code |
-
----
 
 ## Testing
 
 ```bash
-# Run all tests once
-npm test
-
-# Run in watch mode (re-runs on file changes)
-npm run test:watch
+npm test               # run once (131 tests)
+npm run test:watch     # watch mode
+npm run test:coverage  # run with a V8 coverage report (→ ./coverage)
+npm run typecheck      # tsc --noEmit
 ```
 
-Tests use **Vitest** with **@testing-library/react** and **jsdom**. All component tests run in a simulated browser environment.
+We follow TDD and target **80%+ coverage**. The pure engine (`lib/`) sits well
+above that; current overall coverage is **~86% lines / ~83% statements**, with
+enforced regression floors in `vitest.config.ts`. Engine tests assert exact
+decimal-string results (never floats). `next-intl` is mocked against the real
+`messages/en.json`, so component tests check real strings. A live end-to-end
+reconciliation against a real Flex Query has verified every figure to the agora.
 
-### Test conventions
+Every push and PR runs type-check, lint, tests, and coverage via
+[GitHub Actions](./.github/workflows/ci.yml).
 
-- Test files live in `__tests__/` and mirror the source directory structure
-- `next-intl` is mocked via `__mocks__/next-intl.ts` — it reads the real `messages/en.json` translations so component tests assert against actual English strings, not translation keys
-- External API modules (`@/lib/boi/rates`, `@/lib/ibkr/parser-xml`, etc.) are mocked per test file using `vi.mock()`
-- The `localStorage` global is polyfilled in `vitest.setup.ts` to work around a Node.js v25 incompatibility with jsdom
-
-### Adding tests for a new component
-
-1. Create `__tests__/components/<path>/<ComponentName>.test.tsx`
-2. Add `vi.mock('next-intl')` at the top if the component uses `useTranslations`
-3. Mock any external lib modules the component depends on
-4. Assert against the English strings defined in `messages/en.json`
-
----
-
-## Internationalization (i18n)
-
-The app uses **next-intl 4** with two locales: `en` (English, LTR) and `he` (Hebrew, RTL). The locale is part of the URL path (`/en/`, `/he/`) and the layout applies `dir="rtl"` automatically for Hebrew.
-
-### Adding or changing a string
-
-1. Add the key to **both** `messages/en.json` and `messages/he.json`
-2. Use it in the component:
-
-```tsx
-import { useTranslations } from 'next-intl'
-
-export function MyComponent() {
-  const t = useTranslations('myNamespace')
-  return <p>{t('myKey')}</p>
-}
-```
-
-3. For strings with dynamic values:
-
-```json
-{ "greeting": "Hello, {name}!" }
-```
-```tsx
-t('greeting', { name: 'Shaked' })  // → "Hello, Shaked!"
-```
-
-4. For strings with inline markup (bold, code spans, etc.) use `t.rich()`:
-
-```json
-{ "intro": "Go to <code>clientportal.ibkr.com</code> and sign in." }
-```
-```tsx
-t.rich('intro', {
-  code: (chunks) => <span className="font-mono bg-slate-100 px-1 rounded">{chunks}</span>
-})
-```
-
-### Namespace conventions
-
-Each feature area has its own namespace key in the JSON files:
-
-| Namespace | Component(s) |
-|---|---|
-| `app` | Root metadata |
-| `nav` | `Navbar` |
-| `wizard` | `WizardShell` (step labels, back button) |
-| `step1` | `Step1TaxYear` |
-| `step2` | `Step2Import` |
-| `ibkrApi` | `IBKRApiCard` |
-| `fileUpload` | `FileUploadCard` |
-| `privacyModal` | `PrivacyModal` |
-| `step3Review` | `Step3Review` |
-| `summaryCards` | `SummaryCards` |
-| `tradeTable` | `TradeTable` |
-| `step4` | `Step4Summary` |
-| `taxHero` | `TaxSummaryHero` |
-| `taxBreakdown` | `TaxBreakdown` |
-| `step5` | `Step5Export` |
-| `exportPanel` | `ExportPanel` |
-
----
-
-## Tax Calculation Logic
-
-All monetary values are stored and computed as **decimal strings** (never JavaScript floats) using `decimal.js` to avoid floating-point precision errors. Helper functions live in `lib/tax/decimal.ts`.
-
-### Capital Gains
-
-1. For each **sell** trade: `gainLossIls = gainLossUsd × BOI_rate_on_sale_date`
-2. Sum all gains; sum all losses separately
-3. `netCapitalGainIls = max(totalGains − totalLosses, 0)` — losses offset gains but cannot produce a negative result
-4. `capitalGainsTaxIls = netCapitalGainIls × 25%`
-
-### Dividends
-
-For each dividend payment:
-
-1. `grossIls = amountUsd × BOI_rate_on_payment_date`
-2. `withheldIls = withheldTaxUsd × BOI_rate_on_payment_date`
-3. `israeliTaxDue = grossIls × 25%`
-4. `creditApplied = min(withheldIls, israeliTaxDue)` — foreign withholding tax credit, capped at the Israeli liability
-5. `netTaxDue = israeliTaxDue − creditApplied`
-
-### Exchange rates
-
-Rates are fetched from the **Bank of Israel SDMX API** for the full calendar year. If a trade or dividend falls on a weekend or Israeli holiday (no rate published), the calculator walks back up to 7 days to find the nearest prior business day rate.
-
-### Tax rates
-
-All rates are constants in `lib/tax/calculator.ts`:
-
-```ts
-const CAPITAL_GAINS_RATE  = '25'  // 25%
-const DIVIDEND_RATE       = '25'  // 25%
-const FOREIGN_INCOME_RATE = '25'  // 25%
-```
-
-> **Disclaimer:** This tool is a calculation aid. Always verify results with a licensed Israeli tax advisor before filing.
-
----
-
-## Data Flow
+## Project structure
 
 ```
-IBKR Flex XML / CSV
-        │
-        ▼
-  parser-xml.ts / parser-csv.ts
-        │  IBKRData { trades[], dividends[], foreignIncome[] }
-        ▼
-  calculator.ts  ←  BOI exchange rates (RatesMap)
-        │
-        │  TaxResult { capitalGainLines[], dividendLines[], totals… }
-        ▼
-  TaxSummaryHero + TaxBreakdown  (display)
-        │
-        ▼
-  pdf.ts / excel.ts  (export)
+ib-taxil/
+├── app/
+│   ├── [locale]/            # localized layout + entry page (WizardShell)
+│   └── api/boi-rates/       # server route → Bank of Israel SDMX
+├── components/
+│   ├── wizard/              # Step1TaxYear … Step7Filing + WizardShell
+│   ├── import/              # FileUploadCard, IBKRApiCard, FlexGuide
+│   ├── review/              # SummaryCards, TradeTable (year-aware)
+│   ├── summary/             # TaxSummaryHero, TaxBreakdown
+│   ├── export/              # ExportPanel
+│   └── common/              # Explain (renders Explanation codes)
+├── lib/
+│   ├── ibkr/                # parser-xml/-csv, detect, classify, types
+│   ├── boi/                 # dataflow, plan (date span), rates, lookup
+│   ├── tax/                 # ⭐ pure engine
+│   │   ├── calculator.ts    #   orchestrates the whole computation
+│   │   ├── capital-gains.ts · losses.ts · dividends.ts · interest.ts
+│   │   ├── foreign-tax-credit.ts · surtax.ts
+│   │   ├── rates.ts         #   per-year constants + provisional-year logic
+│   │   ├── decimal.ts       #   decimal-string helpers + roundShekels
+│   │   └── explain.ts · types.ts · user-inputs.ts
+│   └── reports/             # pdf, excel, filing-package, field-codes, field-map
+├── messages/                # en.json · he.json
+├── workers/ibkr-proxy/      # optional Cloudflare Worker (Flex CORS relay)
+├── docs/adr/                # architecture decision records
+└── __tests__/               # Vitest suite (mirrors src)
 ```
 
-### Key types
+## Roadmap
 
-**`IBKRData`** (`lib/ibkr/types.ts`) — raw parsed IBKR data:
-- `trades: Trade[]` — all buy and sell transactions
-- `dividends: Dividend[]` — dividend payments with withholding tax
-- `foreignIncome: ForeignIncome[]` — other foreign income
+- [x] Round exported **field values** to whole shekels (engine keeps full precision)
+- [x] Wire **coverage reporting** + CI (GitHub Actions: type-check, lint, test, coverage)
+- [ ] Add **2026** constants once the ITA publishes them (promote from provisional)
+- [ ] Raise coverage floors toward 80% on branches/functions (UI components)
+- [ ] Clear pre-existing lint debt, then make lint a hard CI gate
+- [ ] More brokers / import formats beyond IBKR
+- [ ] Additional source currencies and country baskets
+- [ ] Broader income coverage where it can be sourced reliably
 
-**`TaxResult`** (`lib/tax/types.ts`) — calculated tax output:
-- `netCapitalGainIls`, `capitalGainsTaxIls`
-- `totalDividendsIls`, `dividendsTaxIls`
-- `totalForeignTaxCreditIls`, `totalTaxLiabilityIls`
-- `capitalGainLines[]`, `dividendLines[]` — per-item breakdown for display and export
-
----
-
-## Deployment
-
-### Next.js app → Vercel
-
-```bash
-# One-time: link the project
-npx vercel link
-
-# Deploy to production
-npx vercel --prod
-```
-
-Set `NEXT_PUBLIC_PROXY_URL` to your deployed Cloudflare Worker URL in the Vercel project environment variables dashboard.
-
-### Cloudflare Worker → Cloudflare
-
-```bash
-cd workers/ibkr-proxy
-
-# One-time: authenticate
-npx wrangler login
-
-# Deploy
-npm run deploy
-```
-
-Before deploying, update `ALLOWED_ORIGIN` in `workers/ibkr-proxy/wrangler.toml` to match your production Next.js domain:
-
-```toml
-[vars]
-ALLOWED_ORIGIN = "https://your-app.vercel.app"
-```
-
----
+Have a request? Open a [feature request](./.github/ISSUE_TEMPLATE/feature_request.md).
 
 ## Contributing
 
-### Development workflow
+Contributions are welcome — especially **sourced** tax-data updates. Start with
+**[CONTRIBUTING.md](./CONTRIBUTING.md)**, which covers setup, conventions, testing,
+and step-by-step guides (adding a tax year, an import format, or an export format).
+Please also read the [Code of Conduct](./CODE_OF_CONDUCT.md). Report security or
+privacy issues privately per the [Security Policy](./SECURITY.md).
 
-1. **Branch** — create a feature branch from `master`
-2. **Code** — follow the conventions below
-3. **i18n** — any new user-facing string must be added to both `messages/en.json` and `messages/he.json`
-4. **Tests** — add or update tests in `__tests__/`; run `npm test` to verify
-5. **Type check** — run `npx tsc --noEmit` to catch type errors
-6. **PR** — open a pull request against `master`
+Golden rules: **money is decimal strings**, **every figure is explainable**, and
+**no tax number without an official source**.
 
-### Coding conventions
+## License & legal
 
-- **Immutability** — never mutate objects in place; always return new copies with spread or `Object.assign`
-- **Decimal strings** — all monetary values are plain strings (`"1234.56"`), never JS `number`; use helpers from `lib/tax/decimal.ts` for arithmetic
-- **No `console.log`** in committed code
-- **File size** — keep files under ~400 lines; split by responsibility when they grow
-- **Error handling** — handle errors explicitly at every boundary; provide user-friendly messages in the UI
+- **License:** [Apache License 2.0](./LICENSE) (see also [`NOTICE`](./NOTICE)).
+- **Disclaimer:** [DISCLAIMER.md](./DISCLAIMER.md) — no warranty, no liability, not
+  tax advice, verify with a licensed professional before filing.
 
-### Adding a new data source format
-
-1. Create `lib/ibkr/parser-<format>.ts`
-2. Export a function: `(input: string) => IBKRData`
-3. Add a file type check in `components/import/FileUploadCard.tsx`
-4. Add tests in `__tests__/lib/ibkr/parser-<format>.test.ts`
-
-### Adding a new export format
-
-1. Create `lib/reports/<format>.ts`
-2. Export: `generate<Format>(result: TaxResult, taxYear: number): Promise<void>`
-3. Add a button in `components/export/ExportPanel.tsx` with the corresponding i18n keys in `messages/en.json` and `messages/he.json`
-
-### Running the full stack locally
-
-```bash
-# Terminal 1 — Cloudflare Worker proxy
-cd workers/ibkr-proxy && npm run dev
-
-# Terminal 2 — Next.js app
-NEXT_PUBLIC_PROXY_URL=http://localhost:8787 npm run dev
-```
+Exchange-rate data © Bank of Israel. Product names and trademarks belong to their
+respective owners; IB-Taxil is an independent, unaffiliated project.
