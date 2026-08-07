@@ -23,6 +23,8 @@
     "title": "Select Tax Year",
     "subtitle": "Choose the tax year you're filing for",
     "privacyNote": "Your data is processed entirely in your browser. Nothing is stored on our servers.",
+    "provisionalBadge": "provisional",
+    "provisionalNote": "Years marked “provisional” use the latest confirmed constants until that year's official figures are published — verify before filing.",
     "next": "Continue"
   },
   "step2": {
@@ -236,7 +238,8 @@
     "lossOffset": "Losses of ₪{currentLossIls} (+₪{broughtForwardIls} carried in) offset ₪{usedAgainstGainsIls} of gains and ₪{usedAgainstIncomeIls} of income; ₪{carryForwardIls} carries to next year.",
     "surtax": "Surtax: your ₪{capitalIncomeIls} investment income on top of ₪{otherIncomeIls} exceeds ₪{thresholdIls}; base ₪{baseSurtaxIls} + capital ₪{capitalSurtaxIls} = ₪{totalSurtaxIls}.",
     "credit": "{country}: ₪{foreignTaxIls} foreign tax vs a ₪{ceilingIls} ceiling → ₪{creditedIls} credited, ₪{excessCarryForwardIls} carried forward (5 years).",
-    "quarantined": "{description} ({kind}) was NOT included — report it separately."
+    "quarantined": "{description} ({kind}) was NOT included — report it separately.",
+    "provisionalYear": "Provisional estimate for {year}: the official tax constants for {year} aren't published yet, so {basedOn} values were carried forward. Confirm the surtax threshold and any law changes for {year} before filing."
   },
   "block": {
     "unsupportedYear": "Tax year {year} isn't supported yet.",

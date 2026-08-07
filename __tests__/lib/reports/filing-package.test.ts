@@ -3,7 +3,7 @@ import { buildFilingPackage, FILING_PACKAGE_VERSION } from '@/lib/reports/filing
 import type { TaxResult } from '@/lib/tax/types'
 
 const result = {
-  status: 'ok', taxYear: 2024,
+  status: 'ok', taxYear: 2024, provisional: null,
   capitalGainLines: [], totalGainsIls: '12400', totalLossesIls: '0',
   currentLossUsedAgainstGainsIls: '0', currentLossUsedAgainstIncomeIls: '0',
   broughtForwardUsedIls: '0', carryForwardLossIls: '0',

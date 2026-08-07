@@ -49,6 +49,12 @@ export function Step5Summary({ output, onNext, onBack }: Props) {
         {t('title', { year: output.taxYear })}
       </h2>
 
+      {output.provisional && (
+        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-800 dark:text-amber-200">
+          <Explain explanation={output.provisional.explanation} />
+        </div>
+      )}
+
       <TaxSummaryHero result={output} />
       <TaxBreakdown result={output} />
 
