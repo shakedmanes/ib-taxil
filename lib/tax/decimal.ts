@@ -56,3 +56,11 @@ export const formatIls = (a: string): string =>
  */
 export const roundShekels = (a: string): string =>
   new Decimal(a).toDecimalPlaces(0, Decimal.ROUND_HALF_CEIL).toFixed(0)
+
+/**
+ * Format a value that is entered in a numbered ITA form field: whole shekels
+ * (חוק עיגול סכומים, nearest/half-up), no agorot — e.g. ₪1,235. Use this for
+ * form-box entries; use {@link formatIls} for supporting/worksheet detail.
+ */
+export const formatShekels = (a: string): string =>
+  `₪${Number(roundShekels(a)).toLocaleString('he-IL')}`
