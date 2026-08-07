@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Step1TaxYear } from '@/components/wizard/Step1TaxYear'
+import { selectableYears, MIN_SUPPORTED_YEAR } from '@/lib/tax/rates'
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => ({
@@ -20,26 +21,27 @@ describe('Step1TaxYear', () => {
     return { onTaxYearChange, onNext }
   }
 
-  it('renders 5 year buttons', () => {
+  it('renders only selectable (non-blocked) year buttons', () => {
     setup()
-    const currentYear = new Date().getFullYear()
-    for (let i = 1; i <= 5; i++) {
-      expect(screen.getByText(String(currentYear - i))).toBeInTheDocument()
+    for (const y of selectableYears()) {
+      expect(screen.getByText(String(y))).toBeInTheDocument()
     }
+    // a year before the earliest supported year is never offered
+    expect(screen.queryByText(String(MIN_SUPPORTED_YEAR - 1))).toBeNull()
   })
 
   it('highlights the selected year', () => {
-    const currentYear = new Date().getFullYear()
-    setup(currentYear - 1)
-    const btn = screen.getByText(String(currentYear - 1))
+    const y = selectableYears()[0]
+    setup(y)
+    const btn = screen.getByText(String(y))
     expect(btn.className).toContain('border-blue-600')
   })
 
   it('calls onTaxYearChange when a year is clicked', () => {
     const { onTaxYearChange } = setup()
-    const currentYear = new Date().getFullYear()
-    fireEvent.click(screen.getByText(String(currentYear - 2)))
-    expect(onTaxYearChange).toHaveBeenCalledWith(currentYear - 2)
+    const y = selectableYears()[0]
+    fireEvent.click(screen.getByText(String(y)))
+    expect(onTaxYearChange).toHaveBeenCalledWith(y)
   })
 
   it('calls onNext when Continue is clicked', () => {

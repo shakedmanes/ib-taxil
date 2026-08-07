@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { selectableYears, isYearProvisional } from '@/lib/tax/rates'
 
 interface Props {
   taxYear: number
@@ -10,8 +11,8 @@ interface Props {
 
 export function Step1TaxYear({ taxYear, onTaxYearChange, onNext }: Props) {
   const t = useTranslations('step1')
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - 1 - i)
+  const years = selectableYears()
+  const anyProvisional = years.some(isYearProvisional)
 
   return (
     <div className="max-w-md mx-auto text-center">
@@ -22,21 +23,35 @@ export function Step1TaxYear({ taxYear, onTaxYearChange, onNext }: Props) {
         {t('subtitle')}
       </p>
 
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        {years.map(year => (
-          <button
-            key={year}
-            onClick={() => onTaxYearChange(year)}
-            className={`py-4 rounded-xl text-lg font-semibold border-2 transition-all ${
-              year === taxYear
-                ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-300'
-            }`}
-          >
-            {year}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {years.map(year => {
+          const provisional = isYearProvisional(year)
+          return (
+            <button
+              key={year}
+              onClick={() => onTaxYearChange(year)}
+              className={`relative py-4 rounded-xl text-lg font-semibold border-2 transition-all ${
+                year === taxYear
+                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                  : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-300'
+              }`}
+            >
+              {year}
+              {provisional && (
+                <span className="block text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  {t('provisionalBadge')}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
+
+      {anyProvisional && (
+        <p className="mb-8 text-xs text-amber-600 dark:text-amber-400">
+          {t('provisionalNote')}
+        </p>
+      )}
 
       <div className="mb-6 p-3 bg-green-50 dark:bg-green-950 rounded-lg text-xs text-green-700 dark:text-green-300">
         🔒 {t('privacyNote')}

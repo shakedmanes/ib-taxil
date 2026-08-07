@@ -23,6 +23,8 @@
     "title": "בחר שנת מס",
     "subtitle": "בחר את שנת המס שאתה מגיש עבורה",
     "privacyNote": "הנתונים שלך מעובדים לחלוטין בדפדפן שלך. אנחנו לא שומרים דבר בשרתים שלנו.",
+    "provisionalBadge": "זמני",
+    "provisionalNote": "שנים המסומנות ״זמני״ משתמשות בקבועים המאושרים האחרונים עד לפרסום הנתונים הרשמיים לאותה שנה — יש לאמת לפני ההגשה.",
     "next": "המשך"
   },
   "step2": {
@@ -236,7 +238,8 @@
     "lossOffset": "הפסדים של ₪{currentLossIls} (בתוספת ₪{broughtForwardIls} שהועברו) קוזזו כנגד ₪{usedAgainstGainsIls} רווחים ו-₪{usedAgainstIncomeIls} הכנסה; ₪{carryForwardIls} מועבר לשנה הבאה.",
     "surtax": "מס יסף: הכנסתך מהשקעות בסך ₪{capitalIncomeIls} בנוסף ל-₪{otherIncomeIls} עוברת את הסף של ₪{thresholdIls}; בסיס ₪{baseSurtaxIls} + הון ₪{capitalSurtaxIls} = ₪{totalSurtaxIls}.",
     "credit": "{country}: מס זר של ₪{foreignTaxIls} מול תקרה של ₪{ceilingIls} → ₪{creditedIls} זוכו, ₪{excessCarryForwardIls} מועבר קדימה (5 שנים).",
-    "quarantined": "{description} ({kind}) לא נכלל — יש לדווח עליו בנפרד."
+    "quarantined": "{description} ({kind}) לא נכלל — יש לדווח עליו בנפרד.",
+    "provisionalYear": "אומדן זמני לשנת {year}: הקבועים הרשמיים לשנת {year} טרם פורסמו, ולכן נעשה שימוש בערכי {basedOn}. יש לאמת את מדרגת מס היסף וכל שינוי חקיקה לשנת {year} לפני ההגשה."
   },
   "block": {
     "unsupportedYear": "שנת המס {year} אינה נתמכת עדיין.",

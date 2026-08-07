@@ -4,7 +4,7 @@ import { buildFilingPackage } from '@/lib/reports/filing-package'
 import type { TaxResult } from '@/lib/tax/types'
 
 const result = {
-  status: 'ok', taxYear: 2024, capitalGainLines: [], dividendLines: [], interestLines: [],
+  status: 'ok', taxYear: 2024, provisional: null, capitalGainLines: [], dividendLines: [], interestLines: [],
   netCapitalGainIls: '12400', capitalGainsTaxIls: '3100', dividendsTaxIls: '0', interestTaxIls: '0',
   totalCreditIls: '0', surtaxIls: '0', totalTaxLiabilityIlsRounded: '3100', countryCredits: [],
   totalExcessCreditCarryForwardIls: '0', carryForwardLossIls: '0', quarantined: [], exchangeRatesUsed: [],

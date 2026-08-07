@@ -32,6 +32,20 @@ describe('calculateTax', () => {
       expect(out.netCapitalGainIls).toBe('12400')
       expect(out.capitalGainsTaxIls).toBe('3100')       // 12400*25%
       expect(out.totalTaxLiabilityIlsRounded).toBe('3100')
+      expect(out.provisional).toBeNull()                // 2024 is confirmed
+    }
+  })
+  it('computes a future year provisionally instead of blocking', () => {
+    const futureLot = data({
+      closedLots: [{ id: 'l1', ticker: 'AAPL', description: 'Apple', currency: 'USD', quantity: 100, openDate: '2019-05-01', saleDate: '2030-03-10', proceeds: '12000', cost: '10000', method: 'FIFO' }],
+    })
+    const futureRates: RatesMap = { USD: { '2019-05-01': '3.20', '2030-03-10': '3.70' } }
+    const out = calculateTax(futureLot, futureRates, 2030, baseInputs)
+    expect(out.status).toBe('ok')
+    if (out.status === 'ok') {
+      expect(out.provisional).not.toBeNull()
+      expect(out.provisional?.basedOnYear).toBe(2025)
+      expect(out.capitalGainsTaxIls).toBe('3100')       // constants carried forward
     }
   })
   it('quarantines out-of-scope items without blocking', () => {

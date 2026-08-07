@@ -1,5 +1,5 @@
 import { add, sub, pct, mul, div, roundShekels, isNeg, gt, zero } from './decimal'
-import { SUPPORTED_YEARS } from './rates'
+import { MIN_SUPPORTED_YEAR, LATEST_KNOWN_YEAR, isYearProvisional } from './rates'
 import { computeCapitalGains } from './capital-gains'
 import { offsetLosses } from './losses'
 import { computeDividends } from './dividends'
@@ -34,7 +34,7 @@ export function calculateTax(
 ): EngineOutput {
   const issues: BlockingIssue[] = []
 
-  if (!SUPPORTED_YEARS.includes(taxYear)) {
+  if (taxYear < MIN_SUPPORTED_YEAR) {
     issues.push({ code: 'unsupported-year', count: 1, explanation: { code: 'block.unsupportedYear', params: { year: String(taxYear) } } })
     return { status: 'blocked', issues }
   }
@@ -89,9 +89,17 @@ export function calculateTax(
       explanation: { code: 'explain.quarantined', params: { kind: o.kind, description: o.description } },
     }))
 
+    const provisional = isYearProvisional(taxYear)
+      ? {
+          basedOnYear: LATEST_KNOWN_YEAR,
+          explanation: { code: 'explain.provisionalYear', params: { year: String(taxYear), basedOn: String(LATEST_KNOWN_YEAR) } },
+        }
+      : null
+
     return {
       status: 'ok',
       taxYear,
+      provisional,
       capitalGainLines: cg.lines,
       totalGainsIls: loss.totalGainsIls,
       totalLossesIls: loss.totalLossesIls,

@@ -10,11 +10,11 @@ describe('itaFieldCode', () => {
     expect(itaFieldCode('ftcDividendTax', 2024)).toMatchObject({ form: '1324', code: '431', status: 'verified' })
   })
 
-  it('keeps the code but flags it unverified for unconfirmed years', () => {
-    const f = itaFieldCode('dividend25', 2022)
+  it('keeps the code but flags it unverified for unconfirmed (future) years', () => {
+    const f = itaFieldCode('dividend25', 2027)
     expect(f.code).toBe('141')
     expect(f.status).toBe('unverified')
-    expect(isYearVerified(2022)).toBe(false)
+    expect(isYearVerified(2027)).toBe(false)
     expect(isYearVerified(2024)).toBe(true)
   })
 

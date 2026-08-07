@@ -61,6 +61,13 @@ export interface QuarantinedItem {
   explanation: Explanation
 }
 
+/** Present when the tax year is beyond the latest officially-confirmed year and
+ *  its constants were carried forward — results are estimates pending confirmation. */
+export interface ProvisionalYearInfo {
+  basedOnYear: number
+  explanation: Explanation
+}
+
 export interface BlockingIssue {
   code: 'missing-closed-lots' | 'missing-rate' | 'unsupported-currency' | 'unsupported-year'
   count: number
@@ -70,6 +77,8 @@ export interface BlockingIssue {
 export interface TaxResult {
   status: 'ok'
   taxYear: number
+  /** Non-null when taxYear is provisional (constants carried forward, unconfirmed). */
+  provisional: ProvisionalYearInfo | null
   // capital gains
   capitalGainLines: CapitalGainLine[]
   totalGainsIls: string
