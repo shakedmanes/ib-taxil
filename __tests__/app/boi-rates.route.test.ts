@@ -16,4 +16,15 @@ describe('boi-rates route', () => {
     expect(calledUrl).toContain('startPeriod=2024-01-01')
     expect(calledUrl).toContain('endPeriod=2024-12-31')
   })
+  it('parses observations regardless of attribute order (OBS_VALUE before TIME_PERIOD)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      '<Obs OBS_VALUE="3.72" dim="x" TIME_PERIOD="2024-05-02"/>' +
+      '<Obs TIME_PERIOD="2024-05-03" OBS_VALUE="3.73"/>', { status: 200 })))
+    const res = await GET(req('http://x/api/boi-rates?currency=USD&startperiod=2024-01-01&endperiod=2024-12-31'))
+    const body = await res.json() as { rates: { date: string; rate: string }[] }
+    expect(body.rates).toEqual([
+      { date: '2024-05-02', rate: '3.72' },
+      { date: '2024-05-03', rate: '3.73' },
+    ])
+  })
 })

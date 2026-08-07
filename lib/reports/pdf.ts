@@ -12,11 +12,17 @@ export async function generatePdf(pkg: FilingPackage): Promise<Blob> {
 
   doc.setFontSize(11)
   let y = 30
+  // Add a page before text runs off the bottom of the A4 page (~297mm).
+  const PAGE_BOTTOM = 280
+  const advance = (dy: number) => {
+    y += dy
+    if (y > PAGE_BOTTOM) { doc.addPage(); y = 20 }
+  }
   // Summary figures are shown in whole shekels (חוק עיגול סכומים); the engine
   // keeps full precision, and the Excel workbook carries the exact breakdown.
   const line = (k: string, v: string) => {
     doc.text(`${k}: ${roundShekels(v)}`, 14, y)
-    y += 8
+    advance(8)
   }
   line('Net capital gain (ILS)', pkg.summary.netCapitalGainIls)
   line('Capital gains tax (ILS)', pkg.summary.capitalGainsTaxIls)
@@ -24,12 +30,12 @@ export async function generatePdf(pkg: FilingPackage): Promise<Blob> {
   line('Surtax (ILS)', pkg.summary.surtaxIls)
   line('Total tax liability (ILS)', pkg.summary.totalTaxLiabilityIls)
 
-  y += 6
+  advance(6)
   doc.text('ITA form fields:', 14, y)
-  y += 8
+  advance(8)
   for (const f of mapToFields(pkg.result)) {
     doc.text(`${f.form} · ${f.field}: ${f.valueIls}`, 14, y)
-    y += 7
+    advance(7)
   }
 
   y += 6
