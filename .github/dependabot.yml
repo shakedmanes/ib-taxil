@@ -1,0 +1,26 @@
+version: 2
+# Free automated dependency-update PRs + security alerts.
+updates:
+  # App dependencies
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for routine minor/patch bumps to keep noise down.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Cloudflare Worker sub-project
+  - package-ecosystem: npm
+    directory: "/workers/ibkr-proxy"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions used in the workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
