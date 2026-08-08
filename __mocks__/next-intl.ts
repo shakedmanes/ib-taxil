@@ -31,6 +31,16 @@ function interpolatePlain(template: string, params: Params): string {
   }, template)
 }
 
+function stripHtmlLikeTags(input: string): string {
+  let previous: string
+  let current = input
+  do {
+    previous = current
+    current = current.replace(/<[^>]+>/g, '')
+  } while (current !== previous)
+  return current
+}
+
 function renderRich(template: string, params: Params): React.ReactNode {
   // First substitute non-function params
   const str = interpolatePlain(template, params)
@@ -72,7 +82,7 @@ export function useTranslations(namespace?: string) {
     if (!params) return template
     // Strip any HTML-like tags for plain string output
     const interpolated = interpolatePlain(template, params)
-    return interpolated.replace(/<[^>]+>/g, '')
+    return stripHtmlLikeTags(interpolated)
   }
 
   t.rich = (key: string, params?: Params): React.ReactNode => {
