@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type { EngineOutput } from '@/lib/tax/types'
 import { Step5Summary } from '@/components/wizard/Step5Summary'
 vi.mock('next-intl')
 
@@ -32,7 +33,7 @@ describe('Step5Summary', () => {
           currentLossUsedAgainstGainsIls: '0', currentLossUsedAgainstIncomeIls: '0',
           broughtForwardUsedIls: '0', surtaxExplanation: null,
           lossOffsetExplanation: { code: 'explain.lossOffset', params: {} },
-        } as any}
+        } as unknown as EngineOutput}
         onBack={vi.fn()}
         onNext={vi.fn()}
       />,

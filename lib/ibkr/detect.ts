@@ -21,10 +21,13 @@ export function hasAnyTrade(parsed: unknown): boolean {
     normaliseArray(stmt.Trades?.Trade).length > 0 || normaliseArray(stmt.Trades?.Lot).length > 0)
 }
 
+// fast-xml-parser yields dynamically-shaped nodes; `any` is the untyped-XML boundary.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function flexStatements(parsed: unknown): Record<string, any>[] {
   const doc = parsed as Record<string, any>
   return normaliseArray(doc?.FlexQueryResponse?.FlexStatements?.FlexStatement)
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /** Heuristic: an IBKR Activity Statement CSV rather than a Flex Query. */
 export function looksLikeActivityStatement(input: string): boolean {

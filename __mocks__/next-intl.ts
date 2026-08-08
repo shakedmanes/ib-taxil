@@ -33,7 +33,7 @@ function interpolatePlain(template: string, params: Params): string {
 
 function renderRich(template: string, params: Params): React.ReactNode {
   // First substitute non-function params
-  let str = interpolatePlain(template, params)
+  const str = interpolatePlain(template, params)
 
   // Parse and apply tag-component functions: <tagName>content</tagName>
   const tagPattern = /<(\w+)>([\s\S]*?)<\/\1>/g
