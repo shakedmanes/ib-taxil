@@ -30,11 +30,8 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      # Report-only for now: the repo carries pre-existing lint debt. This surfaces
-      # it on every run without blocking, until it's cleared (then drop this flag).
-      - name: Lint (report-only)
+      - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Test with coverage
         run: npm run test:coverage

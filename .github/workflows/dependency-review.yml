@@ -1,0 +1,22 @@
+name: Dependency Review
+
+# Free: flags pull requests that add known-vulnerable dependencies, with an
+# inline summary on the PR. Runs only on pull requests.
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always

@@ -175,8 +175,11 @@ decimal-string results (never floats). `next-intl` is mocked against the real
 `messages/en.json`, so component tests check real strings. A live end-to-end
 reconciliation against a real Flex Query has verified every figure to the agora.
 
-Every push and PR runs type-check, lint, tests, and coverage via
-[GitHub Actions](./.github/workflows/ci.yml).
+Every push and PR runs type-check, lint (blocking), tests, and coverage via
+[GitHub Actions](./.github/workflows/ci.yml). The repo also has free automated
+[CodeQL](./.github/workflows/codeql.yml) security/quality scanning,
+[Dependency Review](./.github/workflows/dependency-review.yml) on PRs, and
+[Dependabot](./.github/dependabot.yml) dependency updates.
 
 ## Project structure
 
@@ -215,7 +218,7 @@ ib-taxil/
 - [x] Wire **coverage reporting** + CI (GitHub Actions: type-check, lint, test, coverage)
 - [ ] Add **2026** constants once the ITA publishes them (promote from provisional)
 - [ ] Raise coverage floors toward 80% on branches/functions (UI components)
-- [ ] Clear pre-existing lint debt, then make lint a hard CI gate
+- [x] Clear pre-existing lint debt and make lint a hard CI gate
 - [ ] More brokers / import formats beyond IBKR
 - [ ] Additional source currencies and country baskets
 - [ ] Broader income coverage where it can be sourced reliably
