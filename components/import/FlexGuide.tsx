@@ -9,16 +9,9 @@ interface Props {
   defaultOpen?: boolean
 }
 
-// Comprehensive, step-by-step "how to build, run and download your Flex Query"
-// guide (ADR-0003 — a Flex Query with Closed Lots detail is required; an Activity
-// Statement is not enough). Shown in the import step and expanded automatically
-// when an Activity Statement is rejected.
-export function FlexGuide({ taxYear, defaultOpen = false }: Props) {
-  const t = useTranslations('flexGuide')
-  const [open, setOpen] = useState(defaultOpen)
-  const year = taxYear ?? new Date().getFullYear() - 1
-
-  const Step = ({ title, body, items }: { title: string; body?: string; items?: string[] }) => (
+// Declared at module scope (not inside render) so it keeps a stable identity.
+function Step({ title, body, items }: { title: string; body?: string; items?: string[] }) {
+  return (
     <div>
       <p className="font-semibold text-slate-800 dark:text-slate-100">{title}</p>
       {body && <p className="mt-0.5">{body}</p>}
@@ -29,6 +22,16 @@ export function FlexGuide({ taxYear, defaultOpen = false }: Props) {
       )}
     </div>
   )
+}
+
+// Comprehensive, step-by-step "how to build, run and download your Flex Query"
+// guide (ADR-0003 — a Flex Query with Closed Lots detail is required; an Activity
+// Statement is not enough). Shown in the import step and expanded automatically
+// when an Activity Statement is rejected.
+export function FlexGuide({ taxYear, defaultOpen = false }: Props) {
+  const t = useTranslations('flexGuide')
+  const [open, setOpen] = useState(defaultOpen)
+  const year = taxYear ?? new Date().getFullYear() - 1
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">

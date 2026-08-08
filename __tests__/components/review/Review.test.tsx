@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { IBKRData } from '@/lib/ibkr/types'
 import { Step3Review } from '@/components/wizard/Step3Review'
 vi.mock('next-intl')
 
@@ -18,7 +19,7 @@ const data = {
 
 const renderReview = (onToggle = vi.fn()) => render(
   <Step3Review
-    data={data as any}
+    data={data as unknown as IBKRData}
     taxYear={2024}
     substantialHoldings={[]}
     onToggleSubstantial={onToggle}

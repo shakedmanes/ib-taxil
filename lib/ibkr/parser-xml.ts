@@ -89,6 +89,8 @@ function kindFromAsset(a: string): string {
   if (u === 'CASH') return 'forex'
   return 'unsupported'
 }
+// fast-xml-parser yields dynamically-shaped nodes; `any` is the untyped-XML boundary.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function arr(v: unknown): Record<string, any>[] { return !v ? [] : Array.isArray(v) ? v : [v as Record<string, any>] }
 function id(raw: unknown, prefix: string, i: number): string { return String(raw ?? `${prefix}-${i}`) }
 function parseDate(raw: unknown): string {
